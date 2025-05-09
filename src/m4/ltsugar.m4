@@ -1,1 +1,1 @@
-C:/usr/share/aclocal/ltsugar.m4
+/home/jcyannotty/Downloads/openmpi-4.0.7/config/ltsugar.m4

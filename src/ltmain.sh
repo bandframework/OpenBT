@@ -1,1 +1,1 @@
-C:/usr/share/libtool/build-aux/ltmain.sh
+/usr/share/libtool/build-aux/ltmain.sh
