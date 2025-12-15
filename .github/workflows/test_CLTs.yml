@@ -24,7 +24,7 @@ jobs:
         os: [macos-14, macos-15, macos-15-intel,
              ubuntu-22.04, ubuntu-24.04]
         mpi_impl: ["openmpi", "mpich"]
-        python-version: ["3.13"]
+        python-version: ["3.14"]
 
     steps:
     ##-- Setup Testing Environment

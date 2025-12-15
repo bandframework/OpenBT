@@ -17,10 +17,10 @@ jobs:
   #####----- FULL TESTING WITH COVERAGE
   # This also confirms that tox with coverage & report works.
   coverage:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     strategy:
       matrix:
-        python-version: ["3.13"]
+        python-version: ["3.14"]
 
     steps:
     ##-- Setup Testing Environment
