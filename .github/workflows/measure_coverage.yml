@@ -17,7 +17,7 @@ jobs:
   #####----- FULL TESTING WITH COVERAGE
   # This also confirms that tox with coverage & report works.
   coverage:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         python-version: ["3.14"]
@@ -29,7 +29,7 @@ jobs:
     - name: Install mpich
       run: |
         sudo apt-get update
-        sudo apt-get -y install mpich libmpich-dev
+        sudo apt-get -y install mpich
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
       with:
