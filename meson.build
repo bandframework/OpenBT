@@ -1,5 +1,5 @@
 # ----- SPECIFY PROJECT
-# eigen dependency requires at least C++11
+# eigen dependency requires at least C++14
 #
 # The version provided here is the version of the C++ library and command line
 # tools.  The Python package maintains a separate version.  If the C++ code is
@@ -14,7 +14,7 @@ project('openbtmixing', 'cpp',
         license: 'MIT',
         license_files: 'LICENSE',
         default_options: [
-          'cpp_std=c++11',
+          'cpp_std=c++14',
           'buildtype=debug',
           'default_library=shared',
           'b_ndebug=if-release',

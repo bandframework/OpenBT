@@ -25,7 +25,7 @@ implementation provided by the user.
 ## Requirements
 Before building and installing the Python package, users
 must provide
-* a compiler suite that includes a C++ compiler that supports the C++11
+* a compiler suite that includes a C++ compiler that supports the C++14
   standard,
 * an MPI installation that is compatible with the compiler suite, and
 * optionally the [Eigen software package](https://gitlab.com/libeigen/eigen).
