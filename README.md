@@ -35,8 +35,8 @@ the above
 * the [Meson build system](https://mesonbuild.com) and its prerequistes such as
   Python 3 and [ninja](https://ninja-build.org).
 
-While Meson is used internally to build the Python package, it is installed
-automatically just for building the package.
+While both Meson and ninja are used internally to build the Python package, they
+are installed automatically just for building the package.
 
 The Meson build system is setup to automatically detect the compiler suite and
 MPI installation to use.  If Eigen already exists in the system and Meson can
@@ -104,12 +104,8 @@ $ python
 The package can also be built and installed from a clone of this repository with
 ```
 $ cd /path/to/OpenBT/openbtmixing_pypkg
-$ python -m build --sdist
-$ python -m pip install -v dist/openbtmixing-<version>.tar.gz
+$ python -m pip install .
 ```
-where we assume that the [build](https://build.pypa.io/en/stable/index.html)
-package has already been installed.
-
 Developers can setup a virtual environment with a developer/editable mode
 installation of the package with
 ```
