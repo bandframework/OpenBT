@@ -23,14 +23,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-13, macos-14, macos-15,
+        os: [macos-14, macos-15, macos-15-intel,
              ubuntu-22.04, ubuntu-24.04]
         mpi_impl: ["openmpi"]
         python-version: ["3.12"]
         miniconda-version: [py312_24.11.1-0]
         exclude:
           # Prebuilt Intel MPI package not available for macOS
-          - os: [macos-13, macos-14, macos-15]
+          - os: [macos-14, macos-15, macos-15-intel]
             mpi_impl: "impi_rt"
 
     steps:
@@ -48,7 +48,6 @@ jobs:
         which python
         which pip
         python --version
-        python -m pip install build
         conda info
         conda list
         python -m pip list
@@ -68,7 +67,6 @@ jobs:
       run: |
         which python
         pushd $PKG_ROOT
-        python -m build --sdist
-        python -m pip install -v dist/openbtmixing-*.tar.gz
+        python -m pip install .
         popd
         $CLONE_PATH/tools/test_python_installation.py
