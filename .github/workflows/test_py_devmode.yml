@@ -25,13 +25,13 @@ jobs:
     ##-- Setup Testing Environment
     - name: Checkout OpenBTMixing
       uses: actions/checkout@v4
-    - name: Install MPICH
+    - name: Install Open-MPI
       run: |
         if   [ "${{ runner.os }}" = "Linux" ]; then
            sudo apt-get update
-           sudo apt-get -y install mpich
+           sudo apt-get -y install openmpi-bin libopenmpi-dev
         elif [ "${{ runner.os }}" = "macOS" ]; then
-           brew install mpich
+           brew install open-mpi
         fi
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v5
