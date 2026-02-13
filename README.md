@@ -30,6 +30,11 @@ must provide
 * an MPI installation that is compatible with the compiler suite, and
 * optionally the [Eigen software package](https://gitlab.com/libeigen/eigen).
 
+Note that if installing MPI using a package manager, related developer library
+packages such as ``libopenmpi-dev`` or ``libmpich-dev`` might need to be
+installed in addition to the base MPI packages such as ``openmpi-bin`` or
+``mpich``.
+
 To build and install just the bare C++ tools, users must provide in addition to
 the above
 * the [Meson build system](https://mesonbuild.com) and its prerequistes such as
