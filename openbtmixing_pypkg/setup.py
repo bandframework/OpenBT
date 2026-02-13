@@ -1,7 +1,6 @@
 import os
 import sys
 import shutil
-import codecs
 
 import subprocess as sbp
 
@@ -104,7 +103,7 @@ cmdclass = {
 # ----- SPECIFY THE PACKAGE
 def readme_md():
     fname = PKG_ROOT.joinpath("README.md")
-    with codecs.open(fname, "r", encoding="utf8") as fptr:
+    with open(fname, "r", encoding="utf8") as fptr:
         return fptr.read()
 
 
