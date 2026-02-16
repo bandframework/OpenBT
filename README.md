@@ -25,18 +25,23 @@ implementation provided by the user.
 ## Requirements
 Before building and installing the Python package, users
 must provide
-* a compiler suite that includes a C++ compiler that supports the C++11
+* a compiler suite that includes a C++ compiler that supports the C++14
   standard,
 * an MPI installation that is compatible with the compiler suite, and
 * optionally the [Eigen software package](https://gitlab.com/libeigen/eigen).
+
+Note that if installing MPI using a package manager, related developer library
+packages such as ``libopenmpi-dev`` or ``libmpich-dev`` might need to be
+installed in addition to the base MPI packages such as ``openmpi-bin`` or
+``mpich``.
 
 To build and install just the bare C++ tools, users must provide in addition to
 the above
 * the [Meson build system](https://mesonbuild.com) and its prerequistes such as
   Python 3 and [ninja](https://ninja-build.org).
 
-While Meson is used internally to build the Python package, it is installed
-automatically just for building the package.
+While both Meson and ninja are used internally to build the Python package, they
+are installed automatically just for building the package.
 
 The Meson build system is setup to automatically detect the compiler suite and
 MPI installation to use.  If Eigen already exists in the system and Meson can
@@ -104,12 +109,8 @@ $ python
 The package can also be built and installed from a clone of this repository with
 ```
 $ cd /path/to/OpenBT/openbtmixing_pypkg
-$ python -m build --sdist
-$ python -m pip install -v dist/openbtmixing-<version>.tar.gz
+$ python -m pip install .
 ```
-where we assume that the [build](https://build.pypa.io/en/stable/index.html)
-package has already been installed.
-
 Developers can setup a virtual environment with a developer/editable mode
 installation of the package with
 ```

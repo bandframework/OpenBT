@@ -1,5 +1,5 @@
 # ----- SPECIFY PROJECT
-# eigen dependency requires at least C++11
+# eigen dependency requires at least C++14
 #
 # The version provided here is the version of the C++ library and command line
 # tools.  The Python package maintains a separate version.  If the C++ code is
@@ -14,7 +14,7 @@ project('openbtmixing', 'cpp',
         license: 'MIT',
         license_files: 'LICENSE',
         default_options: [
-          'cpp_std=c++11',
+          'cpp_std=c++14',
           'buildtype=debug',
           'default_library=shared',
           'b_ndebug=if-release',
@@ -29,7 +29,7 @@ project('openbtmixing', 'cpp',
 # If users have a local install of eigen that can be discovered with pkg-config
 # or other Meson tricks, then that installation will be used.  Otherwise, meson
 # will download the specific tarball as defined in eigen.wrap and use that.
-eigen_dep = dependency('eigen3', fallback: ['eigen', 'eigen_dep'])
+eigen_dep = dependency('eigen3', fallback: 'eigen')
 deps_all = [eigen_dep]
 
 # ----- USER ARGUMENTS
