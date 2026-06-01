@@ -1,4 +1,4 @@
-name: Test OpenBTMixing C++ Command Line Tools 
+name: Test OpenBT C++ Command Line Tools 
 env:
   CLONE_PATH:   ${{ github.workspace }}
   INSTALL_PATH: ${{ github.workspace }}/../local/OpenBT
@@ -28,7 +28,7 @@ jobs:
 
     steps:
     ##-- Setup Testing Environment
-    - name: Checkout OpenBTMixing
+    - name: Checkout OpenBT
       uses: actions/checkout@v4
     - name: Install ${{ matrix.mpi_impl }}
       run: |
@@ -62,7 +62,7 @@ jobs:
       run: $CLONE_PATH/.github/workflows/install_meson.sh ${{ github.workspace }} ${{ runner.os }}
 
     ##-- Build CLTs from Scratch, Install, & Test
-    - name: Build OpenBTMixing C++ CLTs & Library
+    - name: Build OpenBT C++ CLTs & Library
       run: |
         $CLONE_PATH/tools/build_openbt_clt.sh $INSTALL_PATH --debug
         echo " "

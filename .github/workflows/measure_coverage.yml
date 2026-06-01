@@ -1,7 +1,7 @@
-name: Measure OpenBTMixing Python Coverage
+name: Measure OpenBT Python Coverage
 env:
   CLONE_PATH: ${{ github.workspace }}
-  PKG_ROOT:   ${{ github.workspace }}/openbtmixing_pypkg
+  PKG_ROOT:   ${{ github.workspace }}/openbt_pypkg
   COV_RAW:    ${{ github.workspace }}/coverage
   COV_XML:    ${{ github.workspace }}/coverage.xml
   COV_HTML:   ${{ github.workspace }}/htmlcov
@@ -24,7 +24,7 @@ jobs:
 
     steps:
     ##-- Setup Testing Environment
-    - name: Checkout OpenBTMixing
+    - name: Checkout OpenBT
       uses: actions/checkout@v4
     - name: Install mpich
       run: |

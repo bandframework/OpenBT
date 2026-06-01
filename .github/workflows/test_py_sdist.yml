@@ -1,7 +1,7 @@
-name: Test OpenBTMixing Python Source Distribution
+name: Test OpenBT Python Source Distribution
 env:
   CLONE_PATH: ${{ github.workspace }}
-  PKG_ROOT:   ${{ github.workspace }}/openbtmixing_pypkg
+  PKG_ROOT:   ${{ github.workspace }}/openbt_pypkg
 on:
   push:
     branches:
@@ -41,7 +41,7 @@ jobs:
 
     steps:
     ##-- Setup Testing Environment
-    - name: Checkout OpenBTMixing
+    - name: Checkout OpenBT
       uses: actions/checkout@v4
     - name: Install ${{ matrix.mpi_impl }}
       run: |
@@ -73,10 +73,10 @@ jobs:
       run: $CLONE_PATH/.github/workflows/setup_base_python.sh ${{ runner.os }}
 
     ##-- Run full test suite
-    - name: Run full OpenBtMixing test suite
+    - name: Run full OpenBT test suite
       run: |
         pushd $PKG_ROOT
         python -m build --sdist
-        python -m pip install -v dist/openbtmixing-*.tar.gz
+        python -m pip install -v dist/openbt-*.tar.gz
         popd
         $CLONE_PATH/tools/test_python_installation.py

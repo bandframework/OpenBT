@@ -22,12 +22,12 @@ subprojects/packagecache
 __pycache__
 
 # Standard intermediate products
-openbtmixing_pypkg/dist
-openbtmixing_pypkg/build
-openbtmixing_pypkg/.coverage_openbt
-openbtmixing_pypkg/coverage.xml
-openbtmixing_pypkg/htmlcov
-openbtmixing_pypkg/src/openbtmixing.egg-info
+openbt_pypkg/dist
+openbt_pypkg/build
+openbt_pypkg/.coverage_openbt
+openbt_pypkg/coverage.xml
+openbt_pypkg/htmlcov
+openbt_pypkg/src/openbt.egg-info
 
 # Other files
 .DS_Store
