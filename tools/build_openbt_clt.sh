@@ -3,7 +3,7 @@
 #
 # Build and install the OpenBT C++ library, the standalone command line tools,
 # and tests of the library.  These are **not** needed to install and use the
-# OpenBTMixing Python package.
+# OpenBT Python package.
 #
 # Users must pass the path to the folder in which OpenBT should be installed.
 #

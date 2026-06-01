@@ -50,7 +50,7 @@ _SUCCESS = 0
 
 
 try:
-    import openbtmixing
+    import openbt
 except ImportError as error:
     print()
     print(f"ERROR: {error.name} python package not installed")
@@ -62,7 +62,7 @@ def main():
     DEFAULT_VERBOSITY = 0
 
     # ----- SPECIFY COMMAND LINE USAGE
-    DESCRIPTION = "Return status of OpenBTMixing Python package full testing " \
+    DESCRIPTION = "Return status of OpenBT Python package full testing " \
                   + "as exit code for use with CI\n"
     VERBOSE_HELP = "Verbosity level of pytest logging"
     parser = argparse.ArgumentParser(
@@ -80,8 +80,8 @@ def main():
     verbosity_level = args.verbose
 
     # ----- PRINT VERSION INFORMATION
-    pkg = importlib.metadata.distribution("openbtmixing")
-    location = Path(inspect.getfile(openbtmixing)).parents[0]
+    pkg = importlib.metadata.distribution("openbt")
+    location = Path(inspect.getfile(openbt)).parents[0]
 
     print()
     print("Name: {}".format(pkg.metadata["Name"]))
@@ -98,7 +98,7 @@ def main():
     sys.stdout.flush()
 
     # ----- RUN FULL TEST SUITE
-    return _SUCCESS if openbtmixing.test(verbosity_level) else _FAILURE
+    return _SUCCESS if openbt.test(verbosity_level) else _FAILURE
 
 
 if __name__ == "__main__":
