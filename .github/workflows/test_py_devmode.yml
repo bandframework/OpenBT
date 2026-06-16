@@ -14,29 +14,34 @@ jobs:
   #####----- FULL TESTING WITHOUT COVERAGE
   # Mimic the way in which a developer might work including the direct use of
   # pytest.
+  #
+  # Since the sdist test action is installing MPI implementations manually using
+  # OS package managers, we have this action install MPI via PyPI/pip.
   test_dev_mode:
-    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-15, ubuntu-24.04]
-        python-version: ["3.14"]
-
+        os: [macos-26, ubuntu-24.04]
+        mpi_impl: ["openmpi", "mpich"]
+    runs-on: ${{ matrix.os }}
     steps:
     ##-- Setup Testing Environment
     - name: Checkout OpenBT
-      uses: actions/checkout@v4
-    - name: Install Open-MPI
+      uses: actions/checkout@v6
+    - name: Install ${{ matrix.mpi_impl }}
       run: |
-        if   [ "${{ runner.os }}" = "Linux" ]; then
-           sudo apt-get update
-           sudo apt-get -y install openmpi-bin libopenmpi-dev
-        elif [ "${{ runner.os }}" = "macOS" ]; then
-           brew install open-mpi
+        if   [ "${{ matrix.mpi_impl }}" = "openmpi" ]; then
+           python -m pip install openmpi
+        elif [ "${{ matrix.mpi_impl }}" = "mpich" ]; then
+           python -m pip install mpich
+        else
+           echo "Cannot install ${{ matrix.mpi_impl }}"
+           exit 1
         fi
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+        python -m pip list
+    - name: Set up Python
+      uses: actions/setup-python@v6
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: "3.14"
     - name: Setup Python dependencies
       run: $CLONE_PATH/.github/workflows/setup_base_python.sh ${{ runner.os }}
     ##-- Run full test suite
