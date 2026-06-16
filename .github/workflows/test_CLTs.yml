@@ -2,7 +2,7 @@ name: Test OpenBT C++ Command Line Tools
 env:
   CLONE_PATH:   ${{ github.workspace }}
   INSTALL_PATH: ${{ github.workspace }}/../local/OpenBT
-  HOMEBREW_REQUIRE_TAP_TRUST: 1
+  HOMEBREW_REQUIRE_TAP_TRUST: "1"
 on:
   push:
     branches:
