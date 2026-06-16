@@ -6,7 +6,7 @@ The BART Model Mixing software has been implemented in the [Taweret](https://git
 
 
 # Installation
-The heart of OpenBTMixing is a set of C++ tools that can be used directly via
+The heart of OpenBT is a set of C++ tools that can be used directly via
 the command line or indirectly through the Python and R packages, which wrap
 them.  Typically these tools are built with an implementation of the Message
 Passing Interface (MPI) such as [Open MPI](https://www.open-mpi.org) or
@@ -15,7 +15,7 @@ computations.  In particular, the Python wrapper package is always built with
 MPI support.
 
 The software and its distribution scheme have been developed to allow users to
-use OpenBTMixing with the MPI installation of their choice.  For instance, it
+use OpenBT with the MPI installation of their choice.  For instance, it
 can be built with MPI installations on leadership class platforms and clusters
 that were installed by experts and optimized for their specific platform.  As a
 result, however, the software is not distributed as prebuilt binaries or wheels,
@@ -48,7 +48,7 @@ MPI installation to use.  If Eigen already exists in the system and Meson can
 find it, then Meson will use it for the build.  Otherwise, Meson will
 automatically obtain a copy of Eigen for internal use.
 
-We presently test OpenBTMixing with both Open MPI and MPICH.  In addition, we
+We presently test OpenBT with both Open MPI and MPICH.  In addition, we
 have successfully tested with the Intel MPI implementation and have used the
 Python package with MPI implementations installed
 * via package managers such as Ubuntu's Advanced Packaging Tool (`apt`) and
@@ -81,52 +81,57 @@ $ which meson
 $ meson --version
 ```
 Note that this `meson` virtual environment is for installing **just** the Meson
-build system.  Attempts to install `openbtmixing` into this virtual environment
+build system.  Attempts to install `openbt` into this virtual environment
 will likely fail with an error that the `mesonbuild` module cannot be found.
 
 ## Python package
+The OpenBT Python package is **not** currently distributed on PyPI since the
+[PyPI OpenBT package](https://pypi.org/project/openbt/) already exists.  This
+package will eventually be transferred to this project so that distribution of
+modern versions of this package will be enabled by PyPI under the name `openbt`.
+
+<!--
 The OpenBTMixing Python package is distributed on
 [PyPI](https://pypi.org/project/openbtmixing/) as a source distribution that
 contains the C++ code and files needed by Meson to build the dedicated,
 standalone command line tools that the package will use.  The tools are built
 and installed automatically by Meson as part of executing
 ```
-python -m pip install openbtmixing
+python -m pip install openbt
 ```
 By default, `pip install` does not show any of Meson's progress.  Users and
 developers interested in seeing how Meson satisifies dependencies and reviewing
 compiler output should pass `-v` to `pip install`.
+-->
 
-Openbtmixing package installations can be minimally tested with
+Instead the package should be built and installed from a clone of this repository with
 ```
-$ python
->>> import openbtmixing
->>> openbtmixing.__version__
-'<version>'
->>> openbtmixing.test()
-```
-
-The package can also be built and installed from a clone of this repository with
-```
-$ cd /path/to/OpenBT/openbtmixing_pypkg
+$ cd /path/to/OpenBT/openbt_pypkg
 $ python -m pip install .
 ```
-Developers can setup a virtual environment with a developer/editable mode
-installation of the package with
+Developers can install in developer/editable mode with verbose logging of the
+build process and installation with
 ```
-$ /path/to/target/python -m venv /path/to/venv/my_venv
-$ . /path/to/venv/my_venv/bin/activate
-$ cd /path/to/OpenBT/openbtmixing_pypkg
+$ cd /path/to/OpenBT/openbt_pypkg
 $ python -m pip install -v -e .
 ```
 In this latter case, the command line tools are built automatically and
-installed at `/path/to/OpenBT/openbtmixing_pypkg/src/openbtmixing/bin`.  The
+installed at `/path/to/OpenBT/openbt_pypkg/src/openbt/bin`.  The
 Python package is hardcoded to use those tools so that the existence of another
 set of tools in the system and in `PATH` should not cause issues.
 
+OpenBT package installations can be minimally tested with
+```
+$ python
+>>> import openbt
+>>> openbt.__version__
+'<version>'
+>>> openbt.test()
+```
+
 ## C++ library & command line tool interface
 Developers and C++ users can directly build and install the command line tools,
-an OpenBTMixing library, and library tests with `tools/build_openbt_clt.sh`.
+an OpenBT library, and library tests with `tools/build_openbt_clt.sh`.
 Note that these do **not** need to be built in order to use the Python package.
 
 ## R package
@@ -134,4 +139,4 @@ Note that these do **not** need to be built in order to use the Python package.
 
 # Examples
 
-The examples from the article "Model Mixing Using Bayesian Additive Regression Tress" are reproduced in the jupyter noteboook BART_BMM_Technometrics.ipynb. This notebook can be run locally or in a virtual environment such as google colab.
+The examples from the article "Model Mixing Using Bayesian Additive Regression Trees" are reproduced in the jupyter noteboook BART_BMM_Technometrics.ipynb. This notebook can be run locally or in a virtual environment such as google colab.
