@@ -1,7 +1,7 @@
-name: Test OpenBTMixing in Anaconda
+name: Test OpenBT in Anaconda
 env:
   CLONE_PATH: ${{ github.workspace }}
-  PKG_ROOT:   ${{ github.workspace }}/openbtmixing_pypkg
+  PKG_ROOT:   ${{ github.workspace }}/openbt_pypkg
 on:
   push:
     branches:
@@ -40,7 +40,7 @@ jobs:
         miniconda-version: ${{ matrix.miniconda-version }}
         auto-update-conda: true
         python-version: ${{ matrix.python-version }}
-    - name: Checkout OpenBTMixing
+    - name: Checkout OpenBT
       uses: actions/checkout@v4
     - name: Setup miniconda & log
       shell: bash -el {0}
@@ -62,7 +62,7 @@ jobs:
         mpicxx -show || echo "Cannot check the MPI wrapper specification"
 
     ##-- Run full test suite
-    - name: Run full OpenBtMixing test suite
+    - name: Run full OpenBT test suite
       shell: bash -el {0}
       run: |
         which python

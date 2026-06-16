@@ -1,7 +1,7 @@
-name: Test OpenBTMixing Developer-mode Installation
+name: Test OpenBT Developer-mode Installation
 env:
   CLONE_PATH: ${{ github.workspace }}
-  PKG_ROOT:   ${{ github.workspace }}/openbtmixing_pypkg
+  PKG_ROOT:   ${{ github.workspace }}/openbt_pypkg
 on:
   push:
     branches:
@@ -23,7 +23,7 @@ jobs:
 
     steps:
     ##-- Setup Testing Environment
-    - name: Checkout OpenBTMixing
+    - name: Checkout OpenBT
       uses: actions/checkout@v4
     - name: Install Open-MPI
       run: |
@@ -40,16 +40,16 @@ jobs:
     - name: Setup Python dependencies
       run: $CLONE_PATH/.github/workflows/setup_base_python.sh ${{ runner.os }}
     ##-- Run full test suite
-    - name: Run full OpenBtMixing test suite
+    - name: Run full OpenBT test suite
       run: |
         pushd $PKG_ROOT
         python -m pip install -v -e .
         popd
-        ls -lart $PKG_ROOT/src/openbtmixing
-        ls -lart $PKG_ROOT/src/openbtmixing/bin
+        ls -lart $PKG_ROOT/src/openbt
+        ls -lart $PKG_ROOT/src/openbt/bin
         if   [ "${{ runner.os }}" = "Linux" ]; then
-            ldd $PKG_ROOT/src/openbtmixing/bin/openbtcli
+            ldd $PKG_ROOT/src/openbt/bin/openbtcli
         elif [ "${{ runner.os }}" = "macOS" ]; then
-            otool -L $PKG_ROOT/src/openbtmixing/bin/openbtcli
+            otool -L $PKG_ROOT/src/openbt/bin/openbtcli
         fi
-        pytest $PKG_ROOT/src/openbtmixing/tests
+        pytest $PKG_ROOT/src/openbt/tests

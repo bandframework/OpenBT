@@ -12,7 +12,7 @@ from setuptools.command.build import build as _build
 
 # ----- HARDCODED VALUES
 PKG_ROOT = Path(__file__).resolve().parent
-PY_SRC_PATH = PKG_ROOT.joinpath("src", "openbtmixing")
+PY_SRC_PATH = PKG_ROOT.joinpath("src", "openbt")
 CLT_SRC_PATH = PKG_ROOT.joinpath("cpp")
 
 # Names of C++ products to include
@@ -28,15 +28,15 @@ TEST_REQUIRES = ["pytest", "scipy", "pandas"]
 INSTALL_REQUIRES = CODE_REQUIRES + TEST_REQUIRES
 
 PACKAGE_DATA = {
-    "openbtmixing":
+    "openbt":
         ["tests/bart_bmm_test_data/2d_*.txt"] +
         [f"bin/{clt}" for clt in CLT_NAMES]
 }
 
 PROJECT_URLS = {
-    "Source": "https://github.com/jcyannotty/OpenBT",
-    "Documentation": "https://github.com/jcyannotty/OpenBT",
-    "Tracker": "https://github.com/jcyannotty/OpenBT/issues",
+    "Source": "https://github.com/bandframework/OpenBT",
+    "Documentation": "https://github.com/bandframework/OpenBT",
+    "Tracker": "https://github.com/bandframework/OpenBT/issues",
 }
 
 
@@ -50,7 +50,7 @@ class build(_build):
 
 
 class build_clt(Command):
-    description = "Build the OpenBTMixing command line tools"
+    description = "Build the OpenBT command line tools"
 
     def initialize_options(self):
         pass
@@ -114,7 +114,7 @@ def version():
 
 
 setup(
-    name='openbtmixing',
+    name='openbt',
     version=version(),
     author="John Yannotty",
     author_email="yannotty.1@buckeyemail.osu.edu",

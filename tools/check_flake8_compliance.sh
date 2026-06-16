@@ -47,7 +47,7 @@ declare -a FOLDERS=("tools")
 
 pushd $CLONE_PATH
 
-pushd openbtmixing_pypkg &> /dev/null || exit 1
+pushd openbt_pypkg &> /dev/null || exit 1
 # Let Python package determine if its code is acceptable
 tox -r -e check             || exit $?
 

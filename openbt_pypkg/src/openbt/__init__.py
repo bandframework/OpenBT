@@ -4,4 +4,4 @@ from .openbtmixing import Openbtmix
 
 from .test import test
 
-__version__ = version("openbtmixing")
+__version__ = version("openbt")

@@ -11,7 +11,7 @@ import typing
 
 from pathlib import Path
 
-import openbtmixing.interface_helpers as ih
+import openbt.interface_helpers as ih
 
 #from importlib import reload
 #reload(ih)

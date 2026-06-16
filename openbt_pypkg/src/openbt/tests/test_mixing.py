@@ -14,8 +14,8 @@ import numpy as np
 
 from pathlib import Path
 
-from openbtmixing.tests.polynomial_models import sin_cos_exp
-from openbtmixing import Openbtmix
+from openbt.tests.polynomial_models import sin_cos_exp
+from openbt import Openbtmix
 
 
 _TEST_DATA = Path(__file__).parent.joinpath("bart_bmm_test_data").resolve()

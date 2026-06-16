@@ -3,7 +3,7 @@ import pytest
 
 def test(level=0):
     """
-    Execute openbtmixing's full test suite.
+    Execute openbt's full test suite.
 
     :param level: Level 0 indicates the least logging.  Level 2 indicates the
         maximum logging possible.
@@ -16,4 +16,4 @@ def test(level=0):
     elif level >= 1:
         args = ["-" + "v"*level]
 
-    return (pytest.main(args + ["--pyargs", "openbtmixing.tests"]) == 0)
+    return (pytest.main(args + ["--pyargs", "openbt.tests"]) == 0)
