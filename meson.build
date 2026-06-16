@@ -8,7 +8,7 @@
 # the C++ code can affect the behavior of the Python code.  If, however, only
 # the Python code is changed, only the version of the Python package should be
 # altered.
-project('openbtmixing', 'cpp',
+project('OpenBT', 'cpp',
         meson_version: '>=1.6.0',
         version: '1.1.0',
         license: 'MIT',
@@ -49,7 +49,7 @@ endif
 # ----- SPECIFY HEADERS USED TO BUILD LIBRARY, CLTs, & TESTS
 incdir = include_directories('includes', is_system: false)
 
-# ----- SPECIFY libopenbtmixing LIBRARY
+# ----- SPECIFY libopenbt LIBRARY
 # Sources to build individual components in single library
 src_crn      = ['src/crn.cpp', 'src/tnorm.cpp']
 src_tree     = ['src/treefuns.cpp', 'src/tree.cpp']
@@ -87,7 +87,7 @@ CLTs = [['openbtcli',        'src/cli.cpp'],
 
 # ----- BUILD & INSTALL ALL PRODUCTS
 # For the Python package, only the command line tools are needed since these are
-# built as standalone binaries rather than linked against the openbtmixing
+# built as standalone binaries rather than linked against the openbt
 # library.  This will keep the package's source distribution and installation as
 # small and clean as possible.
 if not get_option('pypkg')
@@ -109,7 +109,7 @@ if not get_option('pypkg')
                     'includes/tree.h',
                     'includes/treefuns.h')
 
-    lib = library('openbtmixing', sources: lib_srcs,
+    lib = library('openbt', sources: lib_srcs,
                   dependencies: deps_all,
                   include_directories: incdir,
                   version: meson.project_version(),
