@@ -34,7 +34,7 @@ PACKAGE_DATA = {
 }
 
 PROJECT_URLS = {
-    "Source": "ttps://github.com/bandframework/OpenBT",
+    "Source": "https://github.com/bandframework/OpenBT",
     "Documentation": "https://github.com/bandframework/OpenBT",
     "Tracker": "https://github.com/bandframework/OpenBT/issues",
 }
