@@ -25,6 +25,11 @@ jobs:
       with:
         python-version: "3.11"
 
+    - name: Install Open MPI
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install openmpi-bin libopenmpi-dev
+
     # NOTE: This step can sometimes stall out, which motivates the above
     # timeout.  While I would like to just load the TexLive container, this will
     # not work since compiling the documentation requires compiling the C++
@@ -32,8 +37,6 @@ jobs:
     # suite.
     - name: Install LaTeX
       run: |
-        sudo apt-get update
-        sudo apt-get -y install openmpi-bin libopenmpi-dev
         sudo apt-get -y install texlive-fonts-recommended texlive-latex-recommended texlive-latex-extra latexmk
 
     - name: Setup Python dependencies
