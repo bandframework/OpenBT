@@ -22,7 +22,7 @@ This package is being developed as part of |band| `framework
    :maxdepth: 1
    :caption: Python User Guide:
 
-   et_started_py
+   get_started_py
    examples_py
    bibliography_py
 
