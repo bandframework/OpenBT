@@ -1,0 +1,58 @@
+name: Build Sphinx Docs 
+env:
+  CLONE_PATH:       ${{ github.workspace }}
+  GH_ACTIONS_PATH:  ${{ github.workspace }}/.github/workflows
+  OPENBT_PYPKG:     ${{ github.workspace }}/openbt_pypkg
+  HTML_DOCS:        ${{ github.workspace }}/docs/build_html
+  PDF_DOCS:         ${{ github.workspace }}/docs/build_pdf
+on:
+  push:
+    branches: main
+  pull_request:
+    branches: main
+
+jobs:
+  build_sphinx:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+    ##-- General Setup Steps
+    - uses: actions/checkout@v6
+
+    # We would like to use 3.12, but this presently fails.
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.11"
+
+    - name: Install Open MPI
+      run: |
+        sudo apt-get update
+        sudo apt-get -y install openmpi-bin libopenmpi-dev
+
+    # NOTE: This step can sometimes stall out, which motivates the above
+    # timeout.  While I would like to just load the TexLive container, this will
+    # not work since compiling the documentation requires compiling the C++
+    # code, which is impossible since the image doesn't contain a compiler
+    # suite.
+    - name: Install LaTeX
+      run: |
+        sudo apt-get -y install texlive-fonts-recommended texlive-latex-recommended texlive-latex-extra latexmk
+
+    - name: Setup Python dependencies
+      run: $GH_ACTIONS_PATH/setup_base_python.sh ${{ runner.os }}
+
+    - name: Build sphinx docs
+      run: |
+        pushd $OPENBT_PYPKG
+        tox -r -e pdf,html
+        popd
+
+    ##-- Make documents available as artifacts
+    - name: Archive OpenBT docs
+      uses: actions/upload-artifact@v7
+      with:
+        name: sphinx-docs
+        path: |
+          ${{ env.HTML_DOCS }}
+          ${{ env.PDF_DOCS }}

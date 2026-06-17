@@ -1,0 +1,11 @@
+{
+    "ie":           "*i.e.,*",
+    "eg":           "*e.g.,*",
+    "via":          "*via*",
+    "etc":          "*etc.*",
+    "pip":          "``pip``",
+    "tox":          "``tox``",
+    "band":         "BAND",
+    "openbt":       "OpenBT",
+    "openbtmixing": "OpenBTMixing"
+}
