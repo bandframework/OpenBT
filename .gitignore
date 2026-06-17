@@ -16,10 +16,15 @@ __pycache__/*
 # meson setup
 subprojects/eigen-*
 subprojects/packagecache
+subprojects/.wraplock
 
 # Other folders
 .vscode/*
 __pycache__
+
+# Sphinx docs
+docs/build_pdf
+docs/build_html
 
 # Standard intermediate products
 openbt_pypkg/dist
