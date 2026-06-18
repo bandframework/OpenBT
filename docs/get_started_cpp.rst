@@ -5,11 +5,8 @@ work with the C++ command line tools directly.  All others should follow the
 installation instructions of the wrapper package provided for their desired
 programming language.
 
-General Installations
----------------------
-
 Dependencies
-^^^^^^^^^^^^
+------------
 .. _Meson: https://mesonbuild.com
 .. _ninja: https://ninja-build.org
 .. _Eigen: https://gitlab.com/libeigen/eigen
@@ -35,7 +32,7 @@ installed in addition to the base MPI packages such as ``openmpi-bin`` or
 ``mpich``.
 
 Meson installation
-^^^^^^^^^^^^^^^^^^
+------------------
 The Meson build system documentation suggests installing Meson |via| package
 manager when possible.  Please refer to that documentation for detailed and
 up-to-date installation information.
@@ -64,7 +61,7 @@ Note that this ``meson`` virtual environment is for installing **just** the
 Meson build system.
 
 Building & Testing
-^^^^^^^^^^^^^^^^^^
+------------------
 .. _Issue 7: https://github.com/bandframework/OpenBT/issues/7
 
 |openbt|'s Meson build system is setup to automatically detect the compiler
