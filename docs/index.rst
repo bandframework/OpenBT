@@ -2,6 +2,7 @@
 =======================
 .. _Open MPI: https://www.open-mpi.org
 .. _MPICH: https://www.mpich.org
+.. _framework: https://bandframework.github.io
 
 .. todo::
     Write high-level description, explain development history, and motivate
@@ -26,8 +27,7 @@ that were installed by experts and optimized for their specific platform.
     repositories, that functionality has not yet been included in this new,
     combined repository (Issue #XYZ).
 
-This package is being developed as part of |band| `framework
-<https://bandframework.github.io/>`_.
+This package is being developed as part of |band| framework_.
 
 .. toctree::
    :numbered:
