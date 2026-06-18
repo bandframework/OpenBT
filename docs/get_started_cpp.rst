@@ -19,15 +19,15 @@ Before building and installing C++ command line tools, users must provide
 
 * a compiler suite that includes a C++ compiler that supports the C++14
   standard,
-* the Meson_ and its prerequistes such as Python 3 and ninja_,
+* the Meson_ build system and its prerequisites such as Python 3 and ninja_,
 * an MPI installation that is compatible with the compiler suite, and
 * optionally the Eigen_ software package.
 
 We presently have a single GitHub action that tests the C++ command line tools
 with both Open MPI and MPICH installed |via| Ubuntu's Advanced Packaging Tool
-(`apt`) and homebrew_ on macOS.  In addition, we have successfully tested with
-the Intel MPI implementation by experts on clusters and that are available as
-modules.
+(``apt``) and homebrew_ on macOS.  In addition, we have successfully run tests
+manually with the Intel MPI implementation as installed by experts on a cluster
+and made available as a module.
 
 Note that if installing MPI using a package manager, related developer library
 packages such as ``libopenmpi-dev`` or ``libmpich-dev`` might need to be
@@ -73,9 +73,10 @@ Meson can find it, then Meson will use it for the build.  Otherwise, Meson will
 automatically obtain a copy of Eigen for internal use.
 
 Developers and C++ users can directly build and install the command line tools,
-an |openbt| library, and library tests with `tools/build_openbt_clt.sh
+an |openbt| library, and all related headers with `tools/build_openbt_clt.sh
 <https://github.com/bandframework/OpenBT/blob/main/tools/build_openbt_clt.sh>`__.
-Please read the documentation at the top of that script for more information.
+This script also runs the command line tool test suite and prints test results.
+Please read the documentation at the top of the script for more information.
 
 .. note::
     The state and effectiveness of the C++ command line tool test suite is under
