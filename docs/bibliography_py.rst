@@ -10,3 +10,4 @@ Bibliography
 
 .. bibliography:: references.bib
     :style: plain
+    :keyprefix: py-

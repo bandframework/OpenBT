@@ -1,5 +1,7 @@
 Examples
 ========
-.. todo::
-    Reference single example notebook and update after Matt finishes cleaning
-    the contents of the repo (Issue #6).
+.. _BART_BMM_Technometrics: https://github.com/bandframework/OpenBT/blob/main/Examples/BART_BMM_Technometrics.ipynb
+
+The examples from :cite:t:`py-BARTMix_Yannotty2024` are reproduced in the
+BART_BMM_Technometrics_ Jupyter noteboook, which can be run locally or in a
+virtual environment such as google colab.
