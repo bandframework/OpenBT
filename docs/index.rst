@@ -6,7 +6,7 @@
     breakdown of documents presented here.  License, copyright, responsibilities
     of user, etc.
 
-This package is being developed as part of |band| `framework
+This packge is being developed as part of |band| `framework
 <https://bandframework.github.io/>`_.
 
 .. toctree::

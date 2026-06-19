@@ -37,7 +37,7 @@ installed in addition to the base MPI packages such as ``openmpi-bin`` or
 
 To build and install just the bare C++ tools, users must provide in addition to
 the above
-* the [Meson build system](https://mesonbuild.com) and its prerequisites such as
+* the [Meson build system](https://mesonbuild.com) and its prerequistes such as
   Python 3 and [ninja](https://ninja-build.org).
 
 While both Meson and ninja are used internally to build the Python package, they
