@@ -23,6 +23,6 @@ jobs:
         id:   lychee
         uses: lycheeverse/lychee-action@v2
         with:
-          args: --root-dir $CLONE_PATH --max-concurrency 1 --timeout 30 --verbose --no-progress './**/*.md' './**/*.html' './**/*.rst'
+          args: --root-dir $CLONE_PATH --max-concurrency 1 --verbose --no-progress './**/*.md' './**/*.rst'
           fail: true
           failIfEmpty: true

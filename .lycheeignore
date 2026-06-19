@@ -1,3 +1,7 @@
 # The examples need to be updated.  They should likely just point people to the
 # User Guide and its installation instructions.
 https://github.com/jcyannotty/OpenBT/blob/main/openbt_0.current_amd64-MPI_Ubuntu_20.04.deb
+
+# Rejected status code: 403 Forbidden
+# This is a major website that is unlikely to change, so OK to ignore rejection.
+https://www.mpich.org
