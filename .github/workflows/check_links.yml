@@ -2,6 +2,7 @@ name: Check Links
 env:
   CLONE_PATH: ${{ github.workspace }}
 on:
+  # TODO: Add weekly cron event to eagerly search for broken links
   push:
     branches: main
   pull_request:
