@@ -21,7 +21,6 @@ jobs:
       matrix:
         os: [macos-14, macos-15, macos-26, macos-26-intel,
              ubuntu-22.04, ubuntu-24.04]
-        python-version: ["3.14"]
     runs-on: ${{ matrix.os }}
 
     steps:

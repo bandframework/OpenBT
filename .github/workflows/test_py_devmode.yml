@@ -27,6 +27,12 @@ jobs:
     ##-- Setup Testing Environment
     - name: Checkout OpenBT
       uses: actions/checkout@v6
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.14"
+    - name: Setup Python dependencies
+      run: $CLONE_PATH/.github/workflows/setup_base_python.sh ${{ runner.os }}
     - name: Install ${{ matrix.mpi_impl }}
       run: |
         if   [ "${{ matrix.mpi_impl }}" = "openmpi" ]; then
@@ -38,12 +44,6 @@ jobs:
            exit 1
         fi
         python -m pip list
-    - name: Set up Python
-      uses: actions/setup-python@v6
-      with:
-        python-version: "3.14"
-    - name: Setup Python dependencies
-      run: $CLONE_PATH/.github/workflows/setup_base_python.sh ${{ runner.os }}
     ##-- Run full test suite
     - name: Run full OpenBT test suite
       run: |
