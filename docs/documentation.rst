@@ -1,6 +1,34 @@
 Documentation
 =============
 
+Tools
+-----
+.. _`typos`: https://github.com/crate-ci/typos
+.. _`lychee`: https://lychee.cli.rs
+
+A GitHub action is run automatically to check for typographic errors in all
+documentation and source code in the repository using the typos_ tool with our
+``typos.toml`` configuration file.  An associated ``typos`` command line tool
+can also be installed locally by developers for checking eagerly for mistakes:
+
+.. code:: console
+
+    $ cd /path/to/OpenBT
+    $ typos --config=typos.toml
+
+Another GitHub action automatically checks the documentation for broken links
+using the tool lychee_ and its ``.lycheeignore`` configuration file.  An
+associated ``lychee`` command line tool can also be installed locally by
+developers for checking eagerly for mistakes:
+
+.. code:: console
+
+    $ cd /path/to/OpenBT
+    $ lychee -v .
+
+Please read the link checking action to determine if extra flags should be
+provided.
+
 Guides
 ------
 .. _`Sphinx`: https://www.sphinx-doc.org
