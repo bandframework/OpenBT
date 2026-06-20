@@ -7,7 +7,7 @@
     of user, etc.
 
 This package is being developed as part of |band| `framework
-<https://bndframework.github.io/>`_.
+<https://bandframework.github.io/>`_.
 
 .. toctree::
    :numbered:
