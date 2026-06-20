@@ -2,11 +2,18 @@ name: Check Links
 env:
   CLONE_PATH: ${{ github.workspace }}
 on:
-  # TODO: Add weekly cron event to eagerly search for broken links
+  # Proactively run once weekly at night on the weekend.
+  #
+  # According to GH docs, schedule events will be disabled if a repo is inactive
+  # for more than 60 days.  They suggest picking off-hour times to avoid
+  # resource contention with other scheduled jobs.
   push:
     branches: main
   pull_request:
     branches: main
+  schedule:
+   - cron:     "41 3 * * 0"
+   - timezone: "America/Chicago"
 
 jobs:
   # Limit network activity concurrency to try to avoid hitting rate limit
