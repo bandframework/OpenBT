@@ -7,9 +7,9 @@ Tools
 .. _`lychee`: https://lychee.cli.rs
 
 A GitHub action is run automatically to check for typographic errors in all
-documentation and source code in the repository using the typos_ tool with our
-``typos.toml`` configuration file.  An associated ``typos`` command line tool
-can also be installed locally by developers for checking eagerly for mistakes:
+documentation in the repository using the typos_ tool with our ``typos.toml``
+configuration file.  An associated ``typos`` command line tool can also be
+installed locally by developers for checking eagerly for mistakes:
 
 .. code:: console
 
@@ -41,9 +41,8 @@ project within the docs_ folder, which facilitates publication |via| `Read the
 Docs`_.  The guides' contents are presently assembled from files only in
 ``docs``, which are written in reStructuredText_.
 
-Refer to the developer guide section on development |via| |tox| to find more
-information about rendering HTML- and PDF-format version of the documentation
-locally.
+Refer to the :ref:`developer_env` section to find more information about
+rendering HTML- and PDF-format version of the documentation locally.
 
 .. todo::
     Should the docstrings in the Python package be updated so that their
@@ -51,17 +50,15 @@ locally.
 
 Macro Definitions
 -----------------
-A set of text macros are defined in
-
-* `docs/sphinx_macros.json <https://github.com/bandframework/OpenBT/blob/main/docs/sphinx_macros.json>`_
-
-and common and |openbt|-specific LaTeX math mode macros are defined in
+Common and |openbt|-specific LaTeX math mode macros are defined in
 
 * `docs/latex_macros_base.json <https://github.com/bandframework/OpenBT/blob/main/docs/latex_macros_base.json>`_
 * `docs/latex_macros_notation.json <https://github.com/bandframework/OpenBT/blob/main/docs/latex_macros_notation.json>`_
 
 to aid in presenting clear, concise, uniform notation across all documents
-related to this project.
+related to this project.  Similarly, a set of text macros are defined in
+
+* `docs/sphinx_macros.json <https://github.com/bandframework/OpenBT/blob/main/docs/sphinx_macros.json>`_
 
 Please familiarize yourself with this list of macros before working on our
-documents and please use the macros consistently as your work.
+documents and please use the macros consistently throughout all documentation.

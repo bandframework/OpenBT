@@ -30,5 +30,5 @@ informal git workflow.  A minimal set of rules are
    changes, a gatekeeper will merge the branch into ``main`` and confirm that
    all actions pass on the associated merge commit.
 
-Developers are encouraged to create PRs early on to begin a dialogue in the PR
-with potential reviewers as soon as possible.
+Developers are encouraged to create PRs early during branch development to begin
+and record a dialogue with potential reviewers in the PR.
