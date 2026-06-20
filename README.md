@@ -9,7 +9,7 @@ The BART Model Mixing software has been implemented in the [Taweret](https://git
 The heart of OpenBT is a set of C++ tools that can be used directly via
 the command line or indirectly through the Python and R packages, which wrap
 them.  Typically these tools are built with an implementation of the Message
-Passing Interface (MPI) such as [Open MPI](https://www.open-mpi.org) or
+Passing Interface (MPI) such as [Open MPI](https://ww.open-mpi.org) or
 [MPICH](https://www.mpich.org) to enable distributed parallelization of
 computations.  In particular, the Python wrapper package is always built with
 MPI support.
