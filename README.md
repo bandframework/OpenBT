@@ -2,7 +2,7 @@
 This repository includes new developments with Bayesian Additive Regression Trees and extends the original OpenBT repository created by Matt Pratola (https://bitbucket.org/mpratola/openbt/src/master/).
 Such extensions include Bayesian Model Mixing and Bayesian Calibration. 
 All of the Bayesian Tree code is written in C++. User interfaces constructed in R and Python allow one to easily run the software.
-The BART Model Mixing software has been implemented in the [Taweret](https://github.com/TaweretOrg/Taweret/tree/main) Python package in conjunction with the [BAND](https://bandframework.github.io/) collaboration.
+The BART Model Mixing software has been implemented in the [Taweret](https://github.com/bandframework/Taweret/tree/main) Python package in conjunction with the [BAND](https://bandframework.github.io/) collaboration.
 
 
 # Installation
