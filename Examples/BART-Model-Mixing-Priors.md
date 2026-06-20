@@ -196,7 +196,7 @@ are represented as points on the respective curves below.
   and
   ![\boldsymbol\beta= (\beta\_{1},\ldots,\beta\_{K})^\top](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;%5Cboldsymbol%5Cbeta%3D%20%28%5Cbeta_%7B1%7D%2C%5Cldots%2C%5Cbeta_%7BK%7D%29%5E%5Ctop "\boldsymbol\beta= (\beta_{1},\ldots,\beta_{K})^\top").
 
-- The prior induced by the indepdent and identically distributed (iid)
+- The prior induced by the independent and identically distributed (iid)
   assumption and the sum-of-trees implies
   ![w_l(x_i)\mid T_j \stackrel{iid}{\sim}N(m\beta_l, m\tau^2)](https://latex.codecogs.com/png.image?%5Cdpi%7B110%7D&space;%5Cbg_white&space;w_l%28x_i%29%5Cmid%20T_j%20%5Cstackrel%7Biid%7D%7B%5Csim%7DN%28m%5Cbeta_l%2C%20m%5Ctau%5E2%29 "w_l(x_i)\mid T_j \stackrel{iid}{\sim}N(m\beta_l, m\tau^2)")
   for
