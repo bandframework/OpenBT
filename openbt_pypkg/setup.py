@@ -23,7 +23,7 @@ CLT_NAMES = ["openbtcli", "openbtpred", "openbtmixingwts"]
 
 # Package metadata
 PYTHON_REQUIRES = ">=3.10"
-CODE_REQUIRES = ["numpy", "matplotlib"]
+CODE_REQUIRES = ["numpy<=2.4.6", "matplotlib"]
 TEST_REQUIRES = ["pytest", "scipy", "pandas"]
 INSTALL_REQUIRES = CODE_REQUIRES + TEST_REQUIRES
 
