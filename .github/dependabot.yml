@@ -10,10 +10,10 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     target-branch: "main"
   - package-ecosystem: "pip"
-    directory: "/"
+    directory: "/openbt_pypkg"
     schedule:
       interval: "daily"
     target-branch: "main"
