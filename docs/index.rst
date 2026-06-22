@@ -52,5 +52,7 @@ This package is being developed as part of |band| framework_.
    :caption: Developer Guide:
 
    contributing
+   git_workflow
    documentation
+   versioning
    tox_usage

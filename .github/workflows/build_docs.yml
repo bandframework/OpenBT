@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 10
     steps:
     ##-- General Setup Steps
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
     # We would like to use 3.12, but this presently fails.
     - name: Set up Python

@@ -12,52 +12,45 @@ on:
 
 jobs:
   #####----- FULL TESTING WITHOUT COVERAGE
-  # Prefer full end-to-end test of local wheel built on demand rather than
-  # testing in local clone alone.
+  # Prefer full end-to-end test of local build/install rather than testing in
+  # local clone alone.
   #
   # This also confirms that the test script is functional.
-  #
-  # Refer to Issue #13 to understand use of older Python, older miniconda
-  # version, and older setup-miniconda version.
   test_anaconda:
-    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-14, macos-15, macos-15-intel,
+        os: [macos-14, macos-15, macos-26, macos-26-intel,
              ubuntu-22.04, ubuntu-24.04]
-        mpi_impl: ["openmpi"]
-        python-version: ["3.12"]
-        miniconda-version: [py312_24.11.1-0]
-        exclude:
-          # Prebuilt Intel MPI package not available for macOS
-          - os: [macos-14, macos-15, macos-15-intel]
-            mpi_impl: "impi_rt"
+    runs-on: ${{ matrix.os }}
 
     steps:
     ##-- Setup Testing Environment
-    - uses: conda-incubator/setup-miniconda@v2.1.1
+    # Following GH action messages, we explicitly remove the defaults channels
+    # setting.  According to the setup-miniconda docs, this is related to a
+    # workaround for
+    #            https://github.com/conda/conda/issues/12356
+    - uses: conda-incubator/setup-miniconda@v4.0.1
       with:
-        miniconda-version: ${{ matrix.miniconda-version }}
+        miniconda-version: "latest"
+        python-version: "3.14"
         auto-update-conda: true
-        python-version: ${{ matrix.python-version }}
+        channels: conda-forge
+        conda-remove-defaults: true
     - name: Checkout OpenBT
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
     - name: Setup miniconda & log
       shell: bash -el {0}
       run: |
         which python
-        which pip
         python --version
         conda info
+        conda install pip
         conda list
-        python -m pip list
-    - name: Install prebuilt ${{ matrix.mpi_impl }} via conda
+    - name: Install prebuilt Open MPI via PyPI
       shell: bash -el {0}
       run: |
-        conda install -c conda-forge ${{ matrix.mpi_impl }}
+        python -m pip install openmpi
         conda list
-        #ls /Users/runner/miniconda3/envs/test/bin
-        #find /Users/runner/miniconda3 -name mpicxx
         which mpicxx || echo "Cannot find the MPI installation"
         mpicxx -show || echo "Cannot check the MPI wrapper specification"
 

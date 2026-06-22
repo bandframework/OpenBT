@@ -32,7 +32,7 @@ model mixing with BART.
     [jcyannotty/openbt/package](https://github.com/jcyannotty/OpenBT/blob/main/openbt_0.current_amd64-MPI_Ubuntu_20.04.deb).
     This can alternatively be done by using the command line as shown
     below. The first argument after `-O` specifies the folder where the
-    packge is downloaded while the second argument specifies the
+    package is downloaded while the second argument specifies the
     location of the package. on Github
 
         $ wget -O /location/of/downloaded/openbt_mixing0.current_amd64-MPI_Ubuntu_20.04.deb
@@ -354,7 +354,7 @@ resulting posterior distributions when using the informative prior.
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Plot the predictions
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Set the labels for hte legend
+# Set the labels for the legend
 g_labs = c(expression(paste(hat(f)[1], '(x)')), expression(paste(hat(f)[2], '(x)')),
            expression(paste(f["\u2020"],'(x)')),"Post. Mean")
 # Plot the predictions obtained with the non-informative prior
@@ -741,7 +741,7 @@ grid.arrange(arrangeGrob(w1 + theme(legend.position = "none"),
 ## Tuning the priors:
 
 This section outlines some general guidelines and observations regarding
-a few noteable tuning parameters in the model. Future work will look to
+a few notable tuning parameters in the model. Future work will look to
 provide a more systematic guidance for selecting these parameters.
 
 - `ntree` - the number of trees:

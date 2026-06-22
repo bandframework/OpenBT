@@ -1,0 +1,13 @@
+[files]
+extend-exclude = [".git",
+                  "misc", "R",
+                  "includes", "src", "tests",
+                  "openbt_pypkg/src/openbt/include"]
+ignore-hidden = false
+
+[default]
+check-filename = true
+check-file = true
+binary = false
+locale = "en"
+unicode = true
