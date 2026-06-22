@@ -57,32 +57,31 @@ While our set of GitHub actions currently test Anaconda installations, the setup
 of those tests within the action runner is less than desirable.  In particular,
 the action no longer succeeds to build |openbt| if an MPI implementation is
 installed using Conda.  Rather, the action installs an MPI implementation from
-PyPI using ``pip``, which is less clean than a Conda installation.  Users who
+PyPI using |pip|, which is less clean than a Conda installation.  Users who
 prefer to use Conda should proceed with extra caution.
 
 Install from PyPI
 -----------------
-.. _OpenBT package: https://pypi.org/project/openbt
+.. _project : https://pypi.org/project/openbt
 
-The |openbt| Python package is **not** currently distributed on PyPI since the
-PyPI `OpenBT package`_ already exists.  That package will eventually be
-transferred to this project so that distribution of modern versions of this
-package will be enabled by PyPI under the name ``openbt``.
+This |openbt| Python package is **not** currently distributed on PyPI since a
+PyPI |openbt| project_ already exists.  That PyPI project space will eventually
+be transferred to this project so that distribution of this package will be
+enabled by PyPI under the name ``openbt``.
 
 Install from clone
 ------------------
 After setting up and activating a virtual environment, users can build and
 install the package from a clone of the |openbt| repository by executing
 
-.. code-block:: bash
+.. code-block:: console
 
     $ cd /path/to/OpenBT/openbt_pypkg
     $ python -m pip install .
 
-Developers can install in developer/editable mode with verbose logging of the
-build process and installation by executing
+The package can be installed in developer/editable mode by executing
 
-.. code-block:: bash
+.. code-block:: console
 
     $ cd /path/to/OpenBT/openbt_pypkg
     $ python -m pip install -v -e .
@@ -95,7 +94,7 @@ Testing
 The |openbt| package contains an integrated test suite, which can be used to
 minimally test an installation by executing
 
-.. code-block::
+.. code-block:: console
 
     $ python
     >>> import openbt
