@@ -27,7 +27,7 @@ jobs:
     steps:
     ##-- Setup Testing Environment
     - name: Checkout OpenBT
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
     - name: Install ${{ matrix.mpi_impl }}
       run: |
         if   [ "${{ runner.os }}" = "Linux" ]; then
