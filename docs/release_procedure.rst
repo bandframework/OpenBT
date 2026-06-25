@@ -128,8 +128,8 @@ Otherwise,
    * One side effect of the use of ``setuptools-scm`` is that by default it
      includes in the distribution all files located within ``openbt_pypkg``.
      However, many files and folders in that space do **not** need to be
-     distributed (|eg| Flake8 configuration files and OpenBT command line tools
-     installed during development in ``src/openbt/bin``).  This is what
+     distributed (|eg| Flake8 configuration files and |openbt| command line
+     tools installed during development in ``src/openbt/bin``).  This is what
      "minimal" means above.  Files and folders that should not be included in
      the distribution are specified in ``MANIFEST.in``.
    * Review the metadata to ensure correct and complete.  This should include
