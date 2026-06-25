@@ -28,7 +28,7 @@ jobs:
         run: $CLONE_PATH/.github/workflows/setup_base_python.sh ${{ runner.os }}
       - name: Build src dist
         run: |
-          pushd $CLONE_PATH
+          pushd $PKG_ROOT
           python -m build
           ls -lart ./dist
           popd
