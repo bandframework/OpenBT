@@ -9,6 +9,11 @@ on:
   pull_request:
     branches:
       - main
+  release:
+    # Have this run on release so that it produces a Python source distribution
+    # whose version is correctly set to the release's vX.Y.Z tag.
+    branches: [main]
+    types: [published]
 
 jobs:
   #####----- BUILD SOURCE DISTRIBUTION

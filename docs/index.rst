@@ -35,4 +35,5 @@ This package is being developed as part of |band| `framework
    git_workflow
    documentation
    versioning
+   release_procedure
    tox_usage
