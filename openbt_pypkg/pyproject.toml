@@ -13,7 +13,7 @@ requires = [
     "setuptools",
     "ninja",
     "meson>=1.6.0",
-    "setuptools_scm[toml]>=6.0"
+    "setuptools_scm[toml]>=10.2.0"
 ]
 build-backend = "setuptools.build_meta"
 
