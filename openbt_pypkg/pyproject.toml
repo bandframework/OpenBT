@@ -19,4 +19,4 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
 root = ".."
-write_to = "src/openbt/_version.py"
+write_to = "openbt_pypkg/src/openbt/_version.py"
