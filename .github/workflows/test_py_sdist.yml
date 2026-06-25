@@ -37,7 +37,7 @@ jobs:
         with:
           name: OpenBT-distribution
           path: |
-            ${{ env.CLONE_PATH }}/dist/openbt-*.tar.gz
+            ${{ env.PKG_ROOT }}/dist/openbt-*.tar.gz
 
   #####----- FULL TESTING WITHOUT COVERAGE
   # Prefer full end-to-end test of installation built from source distribution
@@ -106,12 +106,12 @@ jobs:
     - uses: actions/download-artifact@v8
       with:
         name: OpenBT-distribution
-        path: ${{ env.CLONE_PATH }}/dist
+        path: ${{ env.PKG_ROOT }}/dist
 
     ##-- Run full test suite
     - name: Run full OpenBT test suite
       run: |
-        distribution=$CLONE_PATH/dist/openbt-*.tar.gz
+        distribution=$PKG_ROOT/dist/openbt-*.tar.gz
         ls -la $distribution
         venv=$CLONE_PATH/TestSrc
         which python
