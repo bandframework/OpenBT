@@ -41,8 +41,8 @@ Seed the release process
 Once all tasks have been executed
 
 * Check if a new version of the Eigen package is available through the Meson
-  build system's wrapdb and assess if the new version should be adopted and
-  tested.
+  build system's wrapdb facility and assess if the new version should be adopted
+  and tested.
 * Review and update all metadata in ``setup.py``
 * Review all external dependencies and their stated versions to see if they need
   updating and address on a feature branch
@@ -52,13 +52,13 @@ Once all tasks have been executed
   * `Scipy version support`_
   * `scientific Python support`_
   * Confirm that all version information specified in ``setup.py``,
-    ``pyproject.toml``, ``tox.ini``, and GitHub actions are consistent.
+    ``pyproject.toml``, and ``tox.ini``.
 
 * Modernize all repository actions in accord with changes to supported versions
   and updated GH action infrastructure
 
   * `Supported action runner images`_
-  * Are their test setups that are presently excluded and that should be added
+  * Are there test setups that are presently excluded and that should be added
     back in?
 
 * Review README including badges for necessary cleaning/updates
@@ -129,18 +129,15 @@ Otherwise,
      includes in the distribution all files located within ``openbt_pypkg``.
      However, many files and folders in that space do **not** need to be
      distributed (|eg| Flake8 configuration files and OpenBT command line tools
-     installed in ``src/openbt/bin``).  This is what "minimal" means above.
-     Files and folders that should not be included in the distribution are
-     specified in ``MANIFEST.in``.
+     installed during development in ``src/openbt/bin``).  This is what
+     "minimal" means above.  Files and folders that should not be included in
+     the distribution are specified in ``MANIFEST.in``.
    * Review the metadata to ensure correct and complete.  This should include
      the correct specification of the new version indicator.
 
 #. Gatekeepers to follow installation guide to install and test the Python
    package |via| all provided mechanisms as well as with the release's source
    distribution.
-#. Upload the distributions to the PyPI server, review the package's webpage on
-   PyPI, and repeat tests on a variety of systems using a variety of Python
-   versions and MPI implementations.
 #. Create a clean virtual environment, update |pip|, and install ``twine``.
 #. Use that venv to publish the source distribution to PyPI following the
    `twine instructions`_.  Note that to upload distributions, you will need to

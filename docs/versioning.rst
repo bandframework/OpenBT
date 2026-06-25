@@ -15,11 +15,12 @@ would include the unaltered R package, which has no direct relationship with the
 Python package.
 
 For the Python package, there would be no need to upload to PyPI a "new" version
-of the package when the Python package was not altered as part of the changes.
-While users can access and use such "repeat" versions of the package through a
-local clone, the majority of users, who we assume will install directly from
-PyPI with ``pip install``, will not be exposed to them. They will potentially
-see, however, skipped versions in the package's publication history on PyPI.
+of the package when neither the C++ command line tools nor the Python package
+were altered as part of the changes.  While users can access and use such
+"repeat" versions of the package through a local clone, the majority of users,
+who we assume will install directly from PyPI with ``pip install``, will not be
+exposed to them. They will potentially see, however, skipped versions in the
+package's release history on PyPI.
 
 Versioning rules
 ----------------
@@ -33,7 +34,7 @@ Versioning rules
   ``setuptools-scm`` requirements to allow for automatic versioning of the
   Python package
 * Each release should be made publicly through the repository's release
-  facilities as offered by GitHub
+  facilities as offered by GitHub's web interface
 
 C++ command line tools
 ----------------------
