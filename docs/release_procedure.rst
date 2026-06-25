@@ -12,7 +12,7 @@ Pre-release actions
 
 Seed the release process
 
-* Determine the new version string ``vX.Y.Z`` needed for the release in
+* Determine the new version identifier ``vX.Y.Z`` needed for the release in
   accordance with the contents of :numref:`versioning`.
 * Create a new release "super" issue (|ie| a GitHub issue that simply contains
   a list of links to other GitHub issues).
@@ -22,7 +22,7 @@ Seed the release process
   * Create an issue for each approved task and add link to issue in the
     release "super" issue
   * As work proceeds, a link to each PR can be placed next to its associated
-    Issue's link
+    issue's link
 
 * Optionally, create a post-release issue to group together all new issues
   created during this prerelease/release work that won't be dealt with during
@@ -52,7 +52,7 @@ Once all tasks have been executed
   * `Scipy version support`_
   * `scientific Python support`_
   * Confirm that all version information specified in ``setup.py``,
-    ``pyproject.toml``, and ``tox.ini``.
+    ``pyproject.toml``, and ``tox.ini`` are consistent
 
 * Modernize all repository actions in accord with changes to supported versions
   and updated GH action infrastructure
@@ -74,20 +74,20 @@ Once all tasks have been executed
 
 * Confirm continued adherence to all binding requirements (|eg| BAND SDK)
 * Set the version of the C++ command line tools in their Meson build system
-  `specification file`_ to the correct version string determined earlier
+  `specification file`_ to the correct version identifier determined earlier
 
 Release actions
 ---------------
-When a particular commit on ``main`` is deemed a release,
+When a particular commit on ``main`` is to be deemed a release,
 
-#. Confirm that all actions run on the proposed commit and pass
+#. Confirm that all actions ran successfully on the proposed commit
 #. Perform any review of the action logs deemed necessary based on the changes
    included in the release
 #. Perform any review of the artifacts created by the actions deemed necessary
    based on the changes included in the release
 #. Tag the release commit with the name ``vX.Y.Z`` and push.  This will trigger
    the ``test_py_sdist`` GitHub action, which builds the source distribution
-   with the correct version indicator and tests it.
+   with the correct version identifier and tests it.
 #. Confirm that the action passed with no errors or warnings.  Review the
    action's log.
 #. Create a **draft** release with the correct tag ``vX.Y.Z`` and indicate if
@@ -101,7 +101,7 @@ Command line tools
 ^^^^^^^^^^^^^^^^^^
 #. Gatekeepers to follow installation guide to install and test the command line
    tools.  This should include a review of the build logs and confirming correct
-   logging of the new release version indicator.
+   logging of the new release version identifier.
 
 Python package
 ^^^^^^^^^^^^^^
@@ -121,7 +121,7 @@ release.
 Otherwise,
 
 #. Download the source distribution artifact from the ``test_py_sdist`` action
-   and confirm that filename contains the desired version indicator.
+   and confirm that filename contains the desired version identifier.
 #. Decompress the source distribution with ``tar xvfz`` and confirm correct,
    minimal contents including the presence of the LICENSE file.
 
@@ -133,22 +133,23 @@ Otherwise,
      "minimal" means above.  Files and folders that should not be included in
      the distribution are specified in ``MANIFEST.in``.
    * Review the metadata to ensure correct and complete.  This should include
-     the correct specification of the new version indicator.
+     the correct specification of the new version identifier.
 
 #. Gatekeepers to follow installation guide to install and test the Python
-   package |via| all provided mechanisms as well as with the release's source
+   package in clean virtual environments |via| all provided mechanisms (aside
+   from ``pip install``) as well as by installing from the release's source
    distribution.
 #. Create a clean virtual environment, update |pip|, and install ``twine``.
-#. Use that venv to publish the source distribution to PyPI following the
-   `twine instructions`_.  Note that to upload distributions, you will need to
-   know either your username and password or have an API token that you can
-   generate on the PyPI website under your personal settings.
+#. Use that venv to publish the downloaded source distribution to PyPI following
+   the `twine instructions`_.  Note that to upload the distribution, you will
+   need to know either your username and password or have an API token that you
+   can generate on the PyPI website under your personal settings.
 #. Review the package's webpage on PyPI.
 #. In a clean virtual environment, follow the installation guide for installing
    from |pip| and to test the installation
 
-Post-release
-------------
+Post-release actions
+--------------------
 * Carry out all necessary tasks to integrate the release within the BAND
   framework.
 * Update this document based on lessons learned.
