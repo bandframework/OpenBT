@@ -6,6 +6,7 @@ Pre-release actions
 .. _Python version support: https://devguide.python.org/versions
 .. _Numpy version support: https://numpy.org/neps/nep-0029-deprecation_policy.html#support-table
 .. _Scipy version support: https://docs.scipy.org/doc/scipy/dev/core-dev/index.html#building-binary-installers
+.. _scientific Python support: https://scientific-python.org/specs/spec-0000
 .. _Supported action runner images: https://github.com/actions/runner-images
 .. _specification file: https://github.com/bandframework/OpenBT/blob/main/meson.build
 
@@ -49,6 +50,7 @@ Once all tasks have been executed
   * `Python version support`_
   * `Numpy version support`_
   * `Scipy version support`_
+  * `scientific Python support`_
   * Confirm that all version information specified in ``setup.py``,
     ``pyproject.toml``, ``tox.ini``, and GitHub actions are consistent.
 

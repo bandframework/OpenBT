@@ -23,11 +23,12 @@ see, however, skipped versions in the package's publication history on PyPI.
 
 Versioning rules
 ----------------
+.. _SemVer: https://semver.org
 
 * Only commits on the ``main`` branch can be considered for release
-* Version identifiers are strings that adhere to semantic versioning, and the
-  version increment made will be made based on the most significant change or
-  addition made across all software products in the repository
+* Version identifiers are strings that adhere to semantic versioning (SemVer_),
+  and the version increment made will be made based on the most significant
+  change or addition made across all software products in the repository
 * Release commits will be tagged using ``vX.Y.Z`` in accordance with
   ``setuptools-scm`` requirements to allow for automatic versioning of the
   Python package
