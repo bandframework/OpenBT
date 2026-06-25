@@ -11,16 +11,44 @@ on:
       - main
 
 jobs:
+  #####----- BUILD SOURCE DISTRIBUTION
+  # Build a single source distribution that will be used for testing across all
+  # different test setups.  This distribution is stored as an artifact so that
+  # it can be manually uploaded directly to PyPI as the official (and well
+  # tested) release.
+  build: 
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+      - name: Setup base Python environment
+        run: $CLONE_PATH/.github/workflows/setup_base_python.sh ${{ runner.os }}
+      - name: Build src dist
+        run: |
+          pushd $CLONE_PATH
+          python -m build
+          ls -lart ./dist
+          popd
+      - name: Archive distributions
+        uses: actions/upload-artifact@v7
+        with:
+          name: OpenBT-distribution
+          path: |
+            ${{ env.CLONE_PATH }}/dist/openbt-*.tar.gz
+
   #####----- FULL TESTING WITHOUT COVERAGE
-  # Prefer full end-to-end test of local wheel built on demand rather than
-  # testing in local clone alone.
-  #
-  # This also confirms that the test script is functional.
+  # Prefer full end-to-end test of installation built from source distribution
+  # rather than testing in local clone alone.  In particular we test this in the
+  # similar way to how a user might install/test it.
   #
   # Since this is the main test action with many different test setups, we
   # install different MPI implementations via OS package managers.  The devmode
   # action confirms that users can install MPI implementations using PyPI/pip.
   test_sdist:
+    needs: [build]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -75,12 +103,22 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Setup Python dependencies
       run: $CLONE_PATH/.github/workflows/setup_base_python.sh ${{ runner.os }}
+    - uses: actions/download-artifact@v8
+      with:
+        name: OpenBT-distribution
+        path: ${{ env.CLONE_PATH }}/dist
 
     ##-- Run full test suite
     - name: Run full OpenBT test suite
       run: |
-        pushd $PKG_ROOT
-        python -m build --sdist
-        python -m pip install -v dist/openbt-*.tar.gz
-        popd
-        $CLONE_PATH/tools/test_python_installation.py
+        distribution=$CLONE_PATH/dist/openbt-*.tar.gz
+        ls -la $distribution
+        venv=$CLONE_PATH/TestSrc
+        which python
+        python -m venv $venv
+        . $venv/bin/activate
+        which python
+        python -m pip install --upgrade pip
+        python -m pip install -v $distribution
+        python -m pip list
+        python -c "import openbt ; print(openbt.__version__) ; exit(not openbt.test())"
