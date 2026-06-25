@@ -1,8 +1,8 @@
 Release Procedure
 =================
 
-Prerelease actions
-------------------
+Pre-release actions
+-------------------
 .. _Python version support: https://devguide.python.org/versions
 .. _Numpy version support: https://numpy.org/neps/nep-0029-deprecation_policy.html#support-table
 .. _Scipy version support: https://docs.scipy.org/doc/scipy/dev/core-dev/index.html#building-binary-installers
@@ -11,8 +11,8 @@ Prerelease actions
 
 Seed the release process
 
-* Determine the new version string needed for the release in accordance with the
-  contents of :numref:`versioning`.
+* Determine the new version string ``vX.Y.Z`` needed for the release in
+  accordance with the contents of :numref:`versioning`.
 * Create a new release "super" issue (|ie| a GitHub issue that simply contains
   a list of links to other GitHub issues).
 
@@ -70,7 +70,7 @@ Once all tasks have been executed
 
   * Sphinx/RTD User and Developer Guides
 
-* Confirm continued adherence to all binding requirements (e.g., BAND SDK)
+* Confirm continued adherence to all binding requirements (|eg| BAND SDK)
 * Set the version of the C++ command line tools in their Meson build system
   `specification file`_ to the correct version string determined earlier
 
@@ -83,9 +83,9 @@ When a particular commit on ``main`` is deemed a release,
    included in the release
 #. Perform any review of the artifacts created by the actions deemed necessary
    based on the changes included in the release
-#. Create and push a tag ``vX.Y.Z`` on ``main`` corresponding to the release.
-   This will trigger the ``test_py_sdist`` GitHub action, which builds the
-   source distribution with the correct version and tests it.
+#. Tag the release commit with the name ``vX.Y.Z`` and push.  This will trigger
+   the ``test_py_sdist`` GitHub action, which builds the source distribution
+   with the correct version indicator and tests it.
 #. Confirm that the action passed with no errors or warnings.  Review the
    action's log.
 #. Create a **draft** release with the correct tag ``vX.Y.Z`` and indicate if
@@ -93,13 +93,13 @@ When a particular commit on ``main`` is deemed a release,
    package, or both.
 #. Carry out all necessary checks for the different software products (see
    below).
-#. Change the state of the release to **publish** once all checks are finished
-   and the release is ready for publishing to PyPI.
+#. Change the state of the release to **publish**.
 
 Command line tools
 ^^^^^^^^^^^^^^^^^^
 #. Gatekeepers to follow installation guide to install and test the command line
-   tools.  This should include a review of the build logs.
+   tools.  This should include a review of the build logs and confirming correct
+   logging of the new release version indicator.
 
 Python package
 ^^^^^^^^^^^^^^
@@ -107,7 +107,7 @@ Python package
 
 .. note::
     Since PyPI does not permit the uploading of a revised version to overwrite a
-    previous upload of that same version, these steps should like be done only
+    previous upload of that same version, these steps should likely be done only
     **after** having carried out the sanity checks for all other software
     products.
 
@@ -140,17 +140,13 @@ Otherwise,
    PyPI, and repeat tests on a variety of systems using a variety of Python
    versions and MPI implementations.
 #. Create a clean virtual environment, update |pip|, and install ``twine``.
-#. Use that venv to publish the distributions to PyPI following the
+#. Use that venv to publish the source distribution to PyPI following the
    `twine instructions`_.  Note that to upload distributions, you will need to
    know either your username and password or have an API token that you can
    generate on the PyPI website under your personal settings.
 #. Review the package's webpage on PyPI.
 #. In a clean virtual environment, follow the installation guide for installing
    from |pip| and to test the installation
-
-.. todo::
-    * Should Sphinx docs only be built for public release of RTD on releases or
-      on every commit on ``main``?
 
 Post-release
 ------------

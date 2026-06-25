@@ -10,3 +10,5 @@ include cpp/meson.options
 include cpp/includes/*.h
 include cpp/src/*.cpp
 include cpp/subprojects/*.wrap
+exclude cpp/subprojects/README.md
+exclude cpp/subprojects/wrapdb.json
