@@ -1,3 +1,12 @@
+# IMPORTANT
+# * If necessary, please adjust pyproject.toml and GitHub actions to match
+#   changes to Python version here.
+# * Please make sure that all dependence/version changes made here are reflected
+#   in tox.ini.
+#
+# The version is being set in _version.py by setuptools_scm (see
+# pyproject.toml).  No need to handle version manually here.
+
 import os
 import sys
 import shutil
@@ -23,7 +32,7 @@ CLT_NAMES = ["openbtcli", "openbtpred", "openbtmixingwts"]
 
 # Package metadata
 PYTHON_REQUIRES = ">=3.10"
-CODE_REQUIRES = ["numpy<=2.4.6", "matplotlib"]
+CODE_REQUIRES = ["numpy", "matplotlib"]
 TEST_REQUIRES = ["pytest", "scipy", "pandas"]
 INSTALL_REQUIRES = CODE_REQUIRES + TEST_REQUIRES
 
@@ -107,15 +116,8 @@ def readme_md():
         return fptr.read()
 
 
-def version():
-    fname = PKG_ROOT.joinpath("VERSION")
-    with open(fname, "r") as fptr:
-        return fptr.read().strip()
-
-
 setup(
     name='openbt',
-    version=version(),
     author="John Yannotty",
     author_email="yannotty.1@buckeyemail.osu.edu",
     maintainer="John Yannotty",

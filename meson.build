@@ -1,16 +1,12 @@
 # ----- SPECIFY PROJECT
 # eigen dependency requires at least C++14
 #
-# The version provided here is the version of the C++ library and command line
-# tools.  The Python package maintains a separate version.  If the C++ code is
-# altered, then the version number here should be manually altered and the
-# Python package's version number altered in a similar way since changes made to
-# the C++ code can affect the behavior of the Python code.  If, however, only
-# the Python code is changed, only the version of the Python package should be
-# altered.
+# The version of the C++ command line tools is the X.Y.Z semantic version set
+# into the project below.  For all releases, it should be set to the tag
+# assigned to the release's associated commit.
 project('OpenBT', 'cpp',
         meson_version: '>=1.6.0',
-        version: '1.1.0',
+        version: '1.2.0',
         license: 'MIT',
         license_files: 'LICENSE',
         default_options: [

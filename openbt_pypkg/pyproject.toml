@@ -1,7 +1,22 @@
+# Since the OpenBT package builds the command line tools during installation, we
+# must specify outside of setup.py (i.e., here) the requirements necessary for
+# build and pip to construct an isolated build system virtual environment with
+# tools needed to build both the command line tools and the package.
+#
+# Since setting the version is also part of building distributions, we also
+# include here the version determination mechanism.
+#
+# All other information needed to compose the package itself is in setup.py.
+
 [build-system]
 requires = [
     "setuptools",
     "ninja",
-    "meson>=1.6.0"
+    "meson>=1.6.0",
+    "setuptools_scm[toml]>=6.0"
 ]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+root = ".."
+write_to = "openbt_pypkg/src/openbt/_version.py"
