@@ -1,3 +1,5 @@
+//     mixandemulate.cpp: Implement command-line model interface to model mixing.
+
 #include <chrono>
 #include <iostream>
 #include <string>

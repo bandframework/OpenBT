@@ -1,3 +1,5 @@
+//     mixandemulatepred.cpp: Implement command-line model interface to model mixing prediction.
+
 #include <chrono>
 #include <iostream>
 #include <string>
