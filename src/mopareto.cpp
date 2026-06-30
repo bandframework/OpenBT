@@ -4,6 +4,8 @@
 #include <string>
 #include <ctime>
 #include <sstream>
+#include <algorithm>  // std::set_union, std::set_intersection, std::sort
+#include <unordered_map>  
 
 #include <fstream>
 #include <vector>
@@ -28,6 +30,7 @@ int main(int argc, char* argv[])
 {
    std::string folder("");
    std::string folder2("");
+   std::string folder3("");
 
    if(argc>1)
    {
@@ -43,16 +46,20 @@ int main(int argc, char* argv[])
    //model name, number of saved draws and number of trees
    std::string modelname;
    std::string modelname2;
+   std::string modelname3;
    std::string xicore;
 
    //model name and xi
    conf >> modelname;
    conf >> modelname2;
+   conf >> modelname3;
    conf >> xicore;
 
    //location of the second fitted model
    conf >> folder2;
    folder2=folder2+"/";
+   conf >> folder3;
+   folder3=folder3+"/";
 
    //number of saved draws and number of trees
    size_t nd;
@@ -60,12 +67,16 @@ int main(int argc, char* argv[])
    size_t mh1;
    size_t m2;
    size_t mh2;
+   size_t m3;
+   size_t mh3;
 
    conf >> nd;
    conf >> m1;
    conf >> mh1;
    conf >> m2;
    conf >> mh2;
+   conf >> m3;
+   conf >> mh3;
 
    //number of predictors
    size_t p;
@@ -80,15 +91,21 @@ int main(int argc, char* argv[])
       conf >> maxx[i];
 
    //global means of each response
-   double fmean1, fmean2;
+   double fmean1, fmean2, fmean3;
    conf >> fmean1;
    conf >> fmean2;
+   conf >> fmean3;
 
    //thread count
    int tc;
    conf >> tc;
    conf.close();
 
+   //simple flag to tell us if we are doing 2-output or 3-output Pareto front
+   bool threeresponse=false;
+   if(m3>0) threeresponse=true;
+   size_t d=2;  // number of responses
+   if (threeresponse) d=3;
 
    //MPI initialization
    int mpirank=0;
@@ -166,13 +183,16 @@ int main(int argc, char* argv[])
    ambm1.setxi(&xi); //set the cutpoints for this model object
    ambrt ambm2(m2);
    ambm2.setxi(&xi); //set the cutpoints for this model object
+   ambrt ambm3(m3);
+   if(threeresponse) ambm3.setxi(&xi);
 
    //setup psbrt objects
    psbrt psbm1(mh1);
    psbm1.setxi(&xi); //set the cutpoints for this model object
    psbrt psbm2(mh1);
    psbm2.setxi(&xi); //set the cutpoints for this model object
-
+   psbrt psbm3(mh3);
+   if(threeresponse) psbm3.setxi(&xi);
 
 
    //load first fitted model from file
@@ -322,6 +342,81 @@ int main(int argc, char* argv[])
 
 
 
+   //load third fitted model from file
+   if(threeresponse) {
+#ifndef SILENT
+      if(mpirank==0) cout << "Loading saved posterior tree draws" << endl;
+#endif
+      imf.open(folder3 + modelname3 + ".fit");
+      imf >> ind;
+      imf >> im;
+      imf >> imh;
+#ifdef _OPENMPI
+      if(nd!=ind) { cout << "Error loading posterior trees" << endl; MPI_Finalize(); return 0; }
+      if(m3!=im) { cout << "Error loading posterior trees" << endl; MPI_Finalize(); return 0; }
+      if(mh3!=imh) { cout << "Error loading posterior trees" << endl; MPI_Finalize(); return 0; }
+#else
+      if(nd!=ind) { cout << "Error loading posterior trees" << endl; return 0; }
+      if(m3!=im) { cout << "Error loading posterior trees" << endl; return 0; }
+      if(mh3!=imh) { cout << "Error loading posterior trees" << endl; return 0; }
+#endif
+   }
+
+   temp=0;
+   if(threeresponse) imf >> temp;
+   std::vector<int> e3_ots(temp);
+   if(threeresponse) for(size_t i=0;i<temp;i++) imf >> e3_ots.at(i);
+
+   temp=0;
+   if(threeresponse) imf >> temp;
+   std::vector<int> e3_oid(temp);
+   if(threeresponse) for(size_t i=0;i<temp;i++) imf >> e3_oid.at(i);
+
+   temp=0;
+   if(threeresponse) imf >> temp;
+   std::vector<int> e3_ovar(temp);
+   if(threeresponse) for(size_t i=0;i<temp;i++) imf >> e3_ovar.at(i);
+
+   temp=0;
+   if(threeresponse) imf >> temp;
+   std::vector<int> e3_oc(temp);
+   if(threeresponse) for(size_t i=0;i<temp;i++) imf >> e3_oc.at(i);
+
+   temp=0;
+   if(threeresponse) imf >> temp;
+   std::vector<double> e3_otheta(temp);
+   if(threeresponse) for(size_t i=0;i<temp;i++) imf >> std::scientific >> e3_otheta.at(i);
+
+   temp=0;
+   if(threeresponse) imf >> temp;
+   std::vector<int> e3_sts(temp);
+   if(threeresponse) for(size_t i=0;i<temp;i++) imf >> e3_sts.at(i);
+
+   temp=0;
+   if(threeresponse) imf >> temp;
+   std::vector<int> e3_sid(temp);
+   if(threeresponse) for(size_t i=0;i<temp;i++) imf >> e3_sid.at(i);
+
+   temp=0;
+   if(threeresponse) imf >> temp;
+   std::vector<int> e3_svar(temp);
+   if(threeresponse) for(size_t i=0;i<temp;i++) imf >> e3_svar.at(i);
+
+   temp=0;
+   if(threeresponse) imf >> temp;
+   std::vector<int> e3_sc(temp);
+   if(threeresponse) for(size_t i=0;i<temp;i++) imf >> e3_sc.at(i);
+
+   temp=0;
+   if(threeresponse) imf >> temp;
+   std::vector<double> e3_stheta(temp);
+   if(threeresponse) for(size_t i=0;i<temp;i++) imf >> std::scientific >> e3_stheta.at(i);
+
+   if(threeresponse) imf.close();
+
+
+
+
    // Calculate range of posterior samples to do Pareto front/set on for MPI.
    int startnd=0,endnd=nd-1;
    size_t snd,end,rnd=nd;
@@ -338,7 +433,8 @@ int main(int argc, char* argv[])
    //objects where we'll store the realizations
    std::vector<std::vector<double> > asol;
    std::vector<std::vector<double> > bsol;
-   std::vector<double> thetasol;
+   // std::vector<double> thetasol;
+   std::list<std::vector<double> > thetasol;
 
    // Temporary vectors used for loading one model realization at a time.
    std::vector<int> onn1(m1,1);
@@ -363,13 +459,26 @@ int main(int argc, char* argv[])
    std::vector<std::vector<int> > sc2(mh2, std::vector<int>(1));
    std::vector<std::vector<double> > stheta2(mh2, std::vector<double>(1));
 
+   std::vector<int> onn3(m3,1);
+   std::vector<std::vector<int> > oid3(m3, std::vector<int>(1));
+   std::vector<std::vector<int> > ov3(m3, std::vector<int>(1));
+   std::vector<std::vector<int> > oc3(m3, std::vector<int>(1));
+   std::vector<std::vector<double> > otheta3(m3, std::vector<double>(1));
+   std::vector<int> snn3(mh3,1);
+   std::vector<std::vector<int> > sid3(mh3, std::vector<int>(1));
+   std::vector<std::vector<int> > sv3(mh3, std::vector<int>(1));
+   std::vector<std::vector<int> > sc3(mh3, std::vector<int>(1));
+   std::vector<std::vector<double> > stheta3(mh3, std::vector<double>(1));
+
    // Draw realizations of the posterior predictive.
    size_t curdx1=0;
    size_t cumdx1=0;
    size_t curdx2=0;
    size_t cumdx2=0;
-   std::vector<std::vector<double> > a1,a2,b1,b2;
-   std::vector<double> theta1,theta2;
+   size_t curdx3=0;
+   size_t cumdx3=0;
+   std::vector<std::vector<double> > a1,a2,a3,b1,b2,b3;
+   std::vector<double> theta1,theta2,theta3;
 #ifdef _OPENMPI
    double tstart=0.0,tend=0.0;
    if(mpirank==0) tstart=MPI_Wtime();
@@ -383,6 +492,19 @@ int main(int argc, char* argv[])
    std::vector<std::vector<std::vector<double> > > aset(nd, std::vector<std::vector<double> >(0, std::vector<double>(0)));
    std::vector<std::vector<std::vector<double> > > bset(nd, std::vector<std::vector<double> >(0, std::vector<double>(0)));
    std::vector<std::vector<std::vector<double> > > front(nd, std::vector<std::vector<double> >(0, std::vector<double>(0)));
+
+   // 0. Create hashmap to get xi indices more easily.
+   // Should also work even if xi=xicuts. 
+   std::vector<std::unordered_map<double, size_t> > ximaps;
+   ximaps.reserve(p);
+   for (size_t w=0;w<p;w++) {
+      std::unordered_map<double, size_t> ximap;
+      for (size_t c=0;c<xi[w].size();c++) 
+         ximap[xi[w][c]] = c;
+      ximaps.push_back(ximap);
+   }
+
+
 
    for(size_t i=0;i<nd;i++) {
 
@@ -424,38 +546,50 @@ int main(int argc, char* argv[])
       cumdx2+=curdx2;
       ambm2.loadtree(0,m2,onn2,oid2,ov2,oc2,otheta2);
 
+      // Load a realization from model 3
+      if(threeresponse) {
+         curdx3=0;
+         for(size_t j=0;j<m3;j++) {
+            onn3[j]=e3_ots.at(i*m3+j);
+            oid3[j].resize(onn3[j]);
+            ov3[j].resize(onn3[j]);
+            oc3[j].resize(onn3[j]);
+            otheta3[j].resize(onn3[j]);
+            for(size_t k=0;k< (size_t)onn3[j];k++) {
+               oid3[j][k]=e3_oid.at(cumdx3+curdx3+k);
+               ov3[j][k]=e3_ovar.at(cumdx3+curdx3+k);
+               oc3[j][k]=e3_oc.at(cumdx3+curdx3+k);
+               otheta3[j][k]=e3_otheta.at(cumdx3+curdx3+k);
+            }
+            curdx3+=(size_t)onn3[j];
+         }
+         cumdx3+=curdx3;
+         ambm3.loadtree(0,m3,onn3,oid3,ov3,oc3,otheta3);
+      }
 
       // Calculate Pareto front and set
-      std::vector<std::vector<double> > asol,bsol;
-      std::vector<double> aout(p),bout(p);
-      std::list<std::vector<double> > thetasol;
+      // std::vector<double> aout(p),bout(p);
       if(i>=snd && i<end) {
          // convert ensembles to hyperrectangle format
          ambm1.ens2rects(a1, b1, theta1, minx, maxx, p);
          ambm2.ens2rects(a2, b2, theta2, minx, maxx, p);
 
-         // calculate Pareto front and set for this realization
-         for(size_t j=0;j<theta1.size();j++)
-            for(size_t k=0;k<theta2.size();k++) {
-               // if the rectangles defined by a1[j],b1[j] and a2[k],b2[k] intersect
-              if(probxall_termkl_rect(j,k,a1,b1,a2,b2,minx,maxx,aout,bout)>0.0) { 
-                asol.push_back(aout);
-                bsol.push_back(bout);
-                //The asol.size() is to record the index in the unsorted list so we can back
-                //out the correct VHR for the theta's on the PF later on(line 497-498).
-                //It would be cleaner if we had a list of vector, size_t tuple but this works as well.
-                std::vector<double> th{theta1[j]+fmean1,theta2[k]+fmean2,(double)(asol.size())};
-                thetasol.push_back(th);
-              }
-            }
+         std::list<std::vector<double> > ltheta1;
+         for (double t1: theta1) ltheta1.push_back({t1+fmean1});
+         combine_ensembles(p, xi, ximaps, minx, maxx, a1, b1, ltheta1, a2, b2, theta2, fmean2, asol, bsol, thetasol, true);
 
-         // clear the hyperrectangles for this realization
-         a1.clear();
-         b1.clear();
-         theta1.clear();
-         a2.clear();
-         b2.clear();
-         theta2.clear();
+         if(threeresponse) {
+            // Possible to avoid copying these three containers? 
+            a1 = asol;  
+            b1 = bsol;
+            ltheta1 = thetasol;
+            asol.clear();
+            bsol.clear();
+            thetasol.clear();
+            
+            ambm3.ens2rects(a3,b3,theta3,minx,maxx,p); 
+            combine_ensembles(p, xi, ximaps, minx, maxx, a1, b1, ltheta1, a3, b3, theta3, fmean3, asol, bsol, thetasol, true);
+         }
 
          // then we can get the front,set, and then clear these vectors
          thetasol.sort();
@@ -475,12 +609,11 @@ int main(int argc, char* argv[])
                for(size_t j=0;j<p;j++) {
                   // aset[ii][k][j]=asol[frontdx[k]-1][j];
                   // bset[ii][k][j]=bsol[frontdx[k]-1][j];
-                  aset[ii][k][j]=asol[(size_t)((*it).at(2))-1][j];
-                  bset[ii][k][j]=bsol[(size_t)((*it).at(2))-1][j];
+                  aset[ii][k][j]=asol[(size_t)((*it).at(d))-1][j];
+                  bset[ii][k][j]=bsol[(size_t)((*it).at(d))-1][j];
                }
-               front[ii][k].resize(2);
-               front[ii][k][0]=(*it).at(0);
-               front[ii][k][1]=(*it).at(1);
+               front[ii][k].resize(d);
+               for (size_t dd=0;dd<d;dd++) front[ii][k][dd]=(*it).at(dd);
          }
 
          // if(mpirank==0) cout << "thetasol=" << thetasol.size() << " frontsize=" << frontdx.size() << endl;
@@ -550,10 +683,13 @@ int main(int argc, char* argv[])
    std::ofstream omf(folder + modelname + ".mopareto" + std::to_string(mpirank));
    for(size_t i=0;i<rnd;i++) {
       omf << front[i].size() << " ";
-      for(size_t j=0;j<front[i].size();j++)
-         omf << std::scientific << front[i][j][0] << " ";
-      for(size_t j=0;j<front[i].size();j++)
-         omf << std::scientific << front[i][j][1] << " ";
+      for(size_t dd=0;dd<d;dd++) 
+         for(size_t j=0;j<front[i].size();j++)
+            omf << std::scientific << front[i][j][dd] << " ";
+      // for(size_t j=0;j<front[i].size();j++)
+      //    omf << std::scientific << front[i][j][0] << " ";
+      // for(size_t j=0;j<front[i].size();j++)
+      //    omf << std::scientific << front[i][j][1] << " ";
       for(size_t j=0;j<p;j++)
          for(size_t k=0;k<front[i].size();k++)
             omf << std::scientific << aset[i][k][j] << " ";
