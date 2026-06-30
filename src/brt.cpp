@@ -1022,6 +1022,97 @@ void brt::local_predict(diterator& diter)
       diter.sety(bn->gettheta());
    }
 }
+
+//--------------------------------------------------
+// Influence metrics.  See Pratola, George and McCulloch (2021)
+
+// Cook's distance
+void brt::cookdinfl(std::vector<double>& cdinfl)
+{
+   tree::tree_p tbn; //which bottom node is current x in?
+   std::map<tree::tree_p,size_t> bn_to_idx; //bottom node to index map
+   tree::npv bnv;
+   bnv.clear();
+   t.getbots(bnv);
+   size_t B=bnv.size();
+   std::vector<unsigned int> nodenums(B,0);
+
+   // initialize map
+   for(size_t i=0;i<B;i++) {
+      bn_to_idx[bnv[i]]=i;
+   }
+
+   // count up ni's on this local subset of data
+   double *xx;
+   for(size_t i=0;i<di->n;i++) {
+      xx = di->x + i*di->p;
+      tbn = t.bn(xx,*xi);
+      nodenums[bn_to_idx[tbn]]++;
+   }
+
+   // Sum up the ni's across all MPI threads
+   for(size_t i=0;i<B;i++)
+      MPI_Allreduce(MPI_IN_PLACE,&nodenums[i],1,MPI_UNSIGNED,MPI_SUM,MPI_COMM_WORLD);
+
+   // Cook's D for each obs xx
+   unsigned int ni;
+   for(size_t i=0;i<di->n;i++) {
+      xx = di->x + i*di->p;
+      tbn = t.bn(xx,*xi);
+      ni = nodenums[bn_to_idx[tbn]];
+      cdinfl[i]=((double)ni)/((double)B*((double)ni-1.0)*((double)ni-1.0));
+   }
+}
+
+//KL-divergence based influence metric
+void brt::kldivinfl(std::vector<double>& klinfl)
+{
+   tree::tree_p tbn; //which bottom node is current x in?
+   std::map<tree::tree_p,size_t> bn_to_idx; //bottom node to index map
+   tree::npv bnv;
+   bnv.clear();
+   t.getbots(bnv);
+   size_t B=bnv.size();
+   std::vector<unsigned int> nodenums(B,0);
+
+   // initialize map
+   for(size_t i=0;i<B;i++) {
+      bn_to_idx[bnv[i]]=i;
+   }
+
+   // count up ni's on this local subset of data
+   double *xx;
+   for(size_t i=0;i<di->n;i++) {
+      xx = di->x + i*di->p;
+      tbn = t.bn(xx,*xi);
+      nodenums[bn_to_idx[tbn]]++;
+   }
+
+   // Sum up the ni's across all MPI threads
+   for(size_t i=0;i<B;i++)
+      MPI_Allreduce(MPI_IN_PLACE,&nodenums[i],1,MPI_UNSIGNED,MPI_SUM,MPI_COMM_WORLD);
+
+   // set KL value based on number of observations minus 1.
+   unsigned int ni;
+   for(size_t i=0;i<di->n;i++) {
+      xx = di->x + i*di->p;
+      tbn = t.bn(xx,*xi);
+      ni = nodenums[bn_to_idx[tbn]];
+      if(ni==(unsigned int)mi.minperbot) //ni-1 falls below threshold
+         klinfl[i]=std::numeric_limits<double>::infinity();
+      else
+         klinfl[i]=0.0;
+   }
+}
+
+
+//CPO-based divergence based influence metric
+void brt::cpoinfl(std::vector<double>& cpoinfl)
+{
+   // for cpoinfl in brt class, all we need is to extract the infinities, which is done in kldivinfl already.
+   kldivinfl(cpoinfl);
+}
+
 //--------------------------------------------------
 //save/load tree to/from vector format
 //Note: for single tree models the parallelization just directs
