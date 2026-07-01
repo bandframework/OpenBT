@@ -1,26 +1,4 @@
 //     mbrt.cpp: Mean tree BT model class methods.
-//     Copyright (C) 2012-2016 Matthew T. Pratola, Robert E. McCulloch and Hugh A. Chipman
-//
-//     This file is part of OpenBT.
-//
-//     OpenBT is free software: you can redistribute it and/or modify
-//     it under the terms of the GNU Affero General Public License as published by
-//     the Free Software Foundation, either version 3 of the License, or
-//     (at your option) any later version.
-//
-//     OpenBT is distributed in the hope that it will be useful,
-//     but WITHOUT ANY WARRANTY; without even the implied warranty of
-//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//     GNU Affero General Public License for more details.
-//
-//     You should have received a copy of the GNU Affero General Public License
-//     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//     Author contact information
-//     Matthew T. Pratola: mpratola@gmail.com
-//     Robert E. McCulloch: robert.e.mculloch@gmail.com
-//     Hugh A. Chipman: hughchipman@gmail.com
-
 
 #include "mbrt.h"
 //#include "brtfuns.h"
@@ -289,6 +267,54 @@ void mbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv)
    // }
 // cout << "reduced:" << siv[0]->n << " " << siv[1]->n << endl;
 #endif
+}
+
+void mbrt::local_setr(diterator& diter)
+{
+   tree::tree_p bn;
+
+   for(;diter<diter.until();diter++) {
+      bn = t.bn(diter.getxp(),*xi);
+      resid[*diter] = di->y[*diter] - bn->gettheta();
+   }
+}
+
+//--------------------------------------------------
+// Influence metrics.  See Pratola, George and McCulloch (2021)
+
+// Cook's distance
+void mbrt::cookdinfl(std::vector<double>& cdinfl, double* sigma)
+{
+   brt::cookdinfl(cdinfl);
+   for(size_t i=0;i<di->n;i++) {
+      double stdres = resid[i]/sigma[i];
+      double stdres2 = stdres*stdres;
+      cdinfl[i] *= stdres2;
+   }
+}
+
+//KL-divergence based influence metric
+void mbrt::kldivinfl(std::vector<double>& klinfl, double* sigma)
+{
+   brt::kldivinfl(klinfl);
+   for(size_t i=0;i<di->n;i++)
+      if(klinfl[i]!=std::numeric_limits<double>::infinity()) {
+         double stdres = resid[i]/sigma[i];
+         double stdres2 = stdres*stdres;
+         klinfl[i]=-0.5*std::log(2*3.14159)-std::log(sigma[i])-0.5*stdres2;
+      }
+}
+
+//CPO^-1 based influence metric
+void mbrt::cpoinfl(std::vector<double>& cpoinfl, double* sigma)
+{
+   brt::cpoinfl(cpoinfl);
+   for(size_t i=0;i<di->n;i++)
+      if(cpoinfl[i]!=std::numeric_limits<double>::infinity()) {
+         double stdres = resid[i]/sigma[i];
+         double stdres2 = stdres*stdres;
+         cpoinfl[i]=std::sqrt(2*3.14159)*sigma[i]*std::exp(stdres2/2.0);
+      }
 }
 
 //--------------------------------------------------
