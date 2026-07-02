@@ -26,7 +26,7 @@ that were installed by experts and optimized for their specific platform.
 
 This repository is being established by merging the contents of the original
 `OpenBT repository`_ with the `OpenBTMixing repository`_, which was based off of
-the former.  It, therefore, will supercede those two repositories, which will be
+the former.  It, therefore, will supersede those two repositories, which will be
 frozen.
 
 This repository and its contents are being established and developed as part of
