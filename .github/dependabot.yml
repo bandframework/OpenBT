@@ -12,8 +12,3 @@ updates:
     schedule:
       interval: "weekly"
     target-branch: "main"
-  - package-ecosystem: "pip"
-    directory: "/openbt_pypkg"
-    schedule:
-      interval: "daily"
-    target-branch: "main"
