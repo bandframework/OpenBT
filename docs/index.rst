@@ -11,6 +11,8 @@
 .. image:: images/openbt_logo_rect.png
     :align: center
     :alt: OpenBT
+    :height: 165
+    :width: 451
 
 |openbt| is an extensible software project that implements a variety of Bayesian tree models for scientific and industry applications, including regression, model mixing, sensitivity analysis and multiobjective optimization.  
 
