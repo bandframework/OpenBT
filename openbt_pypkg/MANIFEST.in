@@ -1,4 +1,4 @@
-include LICENSE VERSION
+include LICENSE
 exclude .flake8 .coveragerc
 exclude tox.ini
 prune src/openbt/bin

@@ -1,3 +1,5 @@
+//     mxbrt.h: Mean tree model mixing model class definition.
+
 #ifndef GUARD_mxbrt_h
 #define GUARD_mxbrt_h
 
