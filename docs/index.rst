@@ -1,5 +1,5 @@
-|openbt| Python package
-=======================
+Welcome to |openbt|'s Documentation!
+====================================
 .. _Open MPI: https://www.open-mpi.org
 .. _MPICH: https://www.mpich.org
 .. _framework: https://bandframework.github.io
@@ -17,7 +17,7 @@
 |openbt| is an extensible software project that implements a variety of Bayesian tree models for scientific and industry applications, including regression, model mixing, sensitivity analysis and multiobjective optimization.  
 
 The heart of |openbt| is a set of C++ tools that can be used directly |via| the
-command line or indirectly through the ``openbt`` Python package or ``RopenBT'' R package, which wraps
+command line or indirectly through the ``openbt`` Python package or ``RopenBT`` R package, which wraps
 them.  Typically these tools are built with an implementation of the Message
 Passing Interface (MPI), such as `Open MPI`_ or MPICH_, to enable distributed
 parallelization of computations.  In particular, the Python wrapper package is
@@ -67,6 +67,6 @@ This repository and its contents are being established and developed as part of
    contributing
    git_workflow
    documentation
+   tox_usage
    versioning
    release_procedure
-   tox_usage
