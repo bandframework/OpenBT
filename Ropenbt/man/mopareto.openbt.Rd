@@ -3,7 +3,7 @@
 %\docType{package}
 \title{Pareto Front Multiobjective Optimization for OpenBT regression models.}
 \description{
-  The function \code{mopareto.openbt()} calculates the Pareto front and set for 2 fitted Bayesian tree models.  Supports continous response BART or single tree models.
+  The function \code{mopareto.openbt()} calculates the Pareto front and set for 2 fitted Bayesian tree models.  Supports continuous response BART or single tree models.
 }
 \usage{
 \method{mopareto}{openbt}(

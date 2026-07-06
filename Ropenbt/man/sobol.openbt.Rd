@@ -3,7 +3,7 @@
 %\docType{package}
 \title{Sobol Sensitivity Indices for OpenBT regression models.}
 \description{
-  The function \code{sobol.openbt()} calculates the Sobol' sensitivity metric for Bayesian tree models.  Supports continous response BART or single tree models.
+  The function \code{sobol.openbt()} calculates the Sobol' sensitivity metric for Bayesian tree models.  Supports continuous response BART or single tree models.
 }
 \usage{
 \method{sobol}{openbt}(

@@ -36,7 +36,7 @@ q.upper=0.975, ...)
   \item{mmean}{Posterior predictive mean of \eqn{f({\bf x})}{f(x)}.}
   \item{smean}{Posterior predictive mean of the standard deviation, \eqn{s({\bf x})}{s(x)}.}
   \item{msd}{Posterior standard deviation of the mean, \eqn{f({\bf x})}{f(x)}.}
-  \item{ssd}{Posterior standard deviation of the standard devation, \eqn{s({\bf x})}{s(x)}.}
+  \item{ssd}{Posterior standard deviation of the standard deviation, \eqn{s({\bf x})}{s(x)}.}
   \item{m.5}{Posterior median of the mean function realizations, \eqn{f({\bf x})}{f(x)}.}
   \item{m.lower}{Posterior \code{q.lower} quantile of the mean function realizations.}
   \item{m.upper}{Posterior \code{q.upper} quantile of the mean function realizations.}

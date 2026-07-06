@@ -3,7 +3,7 @@
 %\docType{package}
 \title{Modify an existing \code{OpenBT_cutinfo} cutpoint object.}
 \description{
-  The function \code{servarcuts.openbt()} can modify an exisiting cutpoint object.
+  The function \code{servarcuts.openbt()} can modify an existing cutpoint object.
 }
 \usage{
 \method{setvarcuts}{openbt}(
