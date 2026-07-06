@@ -1,3 +1,5 @@
+//     amxbrt.cpp: BART-based model mixing model class methods.
+
 #include "amxbrt.h"
 #include "brtfuns.h"
 #include <iostream>

@@ -1,3 +1,5 @@
+//     mxbrt.cpp: Base single tree model mixing model class methods.
+
 #include <iostream>
 
 //header files from OpenBT 

@@ -1,3 +1,5 @@
+//     amxbrt.h: BART-based model mixing model class definition.
+
 #ifndef GUARD_amxbrt_h
 #define GUARD_amxbrt_h
 
