@@ -309,7 +309,7 @@ size_t getchgv(size_t oldv, std::vector<std::vector<double> >& chgv, rn& gen)
    std::vector<double> cumprob;
 
    cumprob=chgv[oldv];
-   cumprob[1]=std::abs(cumprob[1]);
+   cumprob[0]=std::abs(cumprob[0]);
    for(size_t i=1;i<p;i++)
       cumprob[i]=std::abs(cumprob[i])+cumprob[i-1];
 
@@ -331,7 +331,7 @@ size_t getchgvfromrow(size_t oldv, std::vector<double>& chgvrow, rn& gen)
    std::vector<double> cumprob;
 
    cumprob=chgvrow;
-   cumprob[1]=std::abs(cumprob[1]);
+   cumprob[0]=std::abs(cumprob[0]);
    for(size_t i=1;i<p;i++)
       cumprob[i]=std::abs(cumprob[i])+cumprob[i-1];
 
