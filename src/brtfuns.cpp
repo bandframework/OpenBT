@@ -1299,7 +1299,7 @@ bool not_dominated(size_t index, std::vector<size_t> R, std::list<std::vector<do
       // if R_ij <= v_j for all j then R_i dominates v, return false
 //      if(theta[R[i]-1][0]<=theta[index-1][0] && theta[R[i]-1][1]<=theta[index-1][1])
       bool is_dominated = true;
-      for (size_t j=0;j<d;j++) is_dominated && ((*itR).at(j) <= (*it).at(j));
+      for (size_t j=0;j<d;j++) is_dominated = is_dominated && ((*itR).at(j) <= (*it).at(j));
       if(is_dominated) return false;
       // if((*itR).at(0) <= (*it).at(0) && (*itR).at(1) <= (*it).at(1))
       //    return false;
