@@ -173,24 +173,6 @@ void singlebinomialbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv)
       MPI_Waitall(tc,request,MPI_STATUSES_IGNORE);
       delete[] request;
 
-      // receive sumwvec, update and send back.
-      for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Recv(&tempsumyvec,siv.size(),MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
-         for(size_t j=0;j<siv.size();j++)
-            sumyvec[j]+=tempsumyvec[j];
-      }
-      request=new MPI_Request[tc];
-      for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Isend(&sumyvec,siv.size(),MPI_DOUBLE,i,0,MPI_COMM_WORLD,&request[i-1]);
-      }
-      // cast back to msi
-      for(size_t i=0;i<siv.size();i++) {
-         singlebinomialsinfo* msi=static_cast<singlebinomialsinfo*>(siv[i]);
-         msi->sumy=sumyvec[i];
-      }
-      MPI_Waitall(tc,request,MPI_STATUSES_IGNORE);
-      delete[] request;
-
       // receive sumyvec, update and send back.
       for(size_t i=1; i<=(size_t)tc; i++) {
          MPI_Recv(&tempsumyvec,siv.size(),MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
@@ -219,7 +201,7 @@ void singlebinomialbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv)
       delete request;
       MPI_Recv(&nvec,siv.size(),MPI_UNSIGNED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
 
-      // send sumwvec, update nvec, receive sumwvec
+      // send sumyvec, update nvec, receive sumyvec
       request=new MPI_Request;
       MPI_Isend(&sumyvec,siv.size(),MPI_DOUBLE,0,0,MPI_COMM_WORLD,request);
       // cast back to msi
@@ -231,19 +213,7 @@ void singlebinomialbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv)
       delete request;
       MPI_Recv(&sumyvec,siv.size(),MPI_DOUBLE,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
 
-      // send sumwyvec, update sumwvec, receive sumwyvec
-      request=new MPI_Request;
-      MPI_Isend(&sumyvec,siv.size(),MPI_DOUBLE,0,0,MPI_COMM_WORLD,request);
-      // cast back to msi
-      for(size_t i=0;i<siv.size();i++) {
-         singlebinomialsinfo* msi=static_cast<singlebinomialsinfo*>(siv[i]);
-         msi->sumy=sumyvec[i];
-      }
-      MPI_Wait(request,MPI_STATUSES_IGNORE);
-      delete request;
-      MPI_Recv(&sumyvec,siv.size(),MPI_DOUBLE,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
-
-      // update sumwyvec
+      // update sumyvec
       // cast back to msi
       for(size_t i=0;i<siv.size();i++) {
          singlebinomialsinfo* msi=static_cast<singlebinomialsinfo*>(siv[i]);
