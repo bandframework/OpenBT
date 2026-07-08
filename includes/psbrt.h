@@ -20,7 +20,7 @@ public:
    //constructors/destructors
    psbrt(): sbrt(),m(10),sb(m),notjsigmavs(m),divec(m) {}
    psbrt(size_t im): sbrt(),m(im),sb(m),notjsigmavs(m),divec(m) {}
-   psbrt(size_t im, double itheta): sbrt(pow(itheta,1/im)),m(im),sb(m),notjsigmavs(m),divec(m) {}
+   psbrt(size_t im, double itheta): sbrt(pow(itheta,1.0/im)),m(im),sb(m),notjsigmavs(m),divec(m) {}
    virtual ~psbrt() {
       if(!notjsigmavs.empty()) {
          for(size_t j=0;j<m;j++) notjsigmavs[j].clear();
