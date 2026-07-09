@@ -9,6 +9,7 @@ Pre-release actions
 .. _scientific Python support: https://scientific-python.org/specs/spec-0000
 .. _Supported action runner images: https://github.com/actions/runner-images
 .. _specification file: https://github.com/bandframework/OpenBT/blob/main/meson.build
+.. _DESCRIPTION file: https://github.com/bandframework/OpenBT/blob/main/Ropenbt/DESCRIPTION 
 
 Seed the release process
 
@@ -75,6 +76,8 @@ Once all tasks have been executed
 * Confirm continued adherence to all binding requirements (|eg| BAND SDK)
 * Set the version of the C++ command line tools in their Meson build system
   `specification file`_ to the correct version identifier determined earlier
+* Set the version of the R package in its `DESCRIPTION file`_ to the correct
+  version identifier determined earlier.  Set release date as well.
 
 Release actions
 ---------------
@@ -92,7 +95,7 @@ When a particular commit on ``main`` is to be deemed a release,
    action's log.
 #. Create a **draft** release with the correct tag ``vX.Y.Z`` and indicate if
    the release included changes to the C++ command line tools, the Python
-   package, or both.
+   package, the R package, or some combination of these.
 #. Carry out all necessary checks for the different software products (see
    below).
 #. Change the state of the release to **publish**.
@@ -147,6 +150,11 @@ Otherwise,
 #. Review the package's webpage on PyPI.
 #. In a clean virtual environment, follow the installation guide for installing
    from |pip| and to test the installation
+
+R package
+^^^^^^^^^
+#. Gatekeepers to follow installation guide to install and test the R
+   package in a clean environment
 
 Post-release actions
 --------------------
