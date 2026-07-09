@@ -706,7 +706,7 @@ bool merge(tree::tree_p tl, tree::tree_p tr, tree::tree_p t, size_t v, size_t c,
    else if(arenodesequal(tl,tr) && !splitsonv(tl,tr,v)) {  //merging type 4
       m1=mergecount(tl->l,tr->l,v,c,&tnwl);
       m2=mergecount(tl->r,tr->r,v,c,&tnwr);
-      if(u < (1.0/(tnwl+tnwr+1.0)) )
+      if(u < (1.0/((double)tnwl*tnwr+1.0)) )
       {
          temptl=tl;
          temptr=tr;
