@@ -6,6 +6,7 @@
 #include "tree.h"
 #include "treefuns.h"
 #include "dinfo.h"
+#include <limits>
 
 #ifdef _OPENMP
 #   include <omp.h>
@@ -83,7 +84,8 @@ public:
       mcmcinfo(): pbd(1.0),pb(.5),minperbot(5),dopert(true),pertalpha(0.1),pertproposal(1),
                   pertaccept(0),rotproposal(0),rotaccept(1),bproposal(0),baccept(1),dproposal(0),
                   daccept(1),pchgv(0.2),chgvproposal(1),chgvaccept(0),corv(0),
-                  dostats(false),varcount(0),tavgd(0.0),tmaxd(0) {} 
+                  dostats(false),varcount(0),tavgd(0.0),tmaxd(0),
+                  tmind(std::numeric_limits<unsigned int>::max()) {} 
       double pbd;
       double pb;
       size_t minperbot;
@@ -134,7 +136,7 @@ public:
    void setstats(bool dostats) { mi.dostats=dostats; if(dostats) mi.varcount=new unsigned int[xi->size()]; }
    void getstats(unsigned int* vc, double* tad, unsigned int* tmd, unsigned int* tid) { *tad=mi.tavgd; *tmd=mi.tmaxd; *tid=mi.tmind; for(size_t i=0;i<xi->size();i++) vc[i]=mi.varcount[i]; }
    void addstats(unsigned int* vc, double* tad, unsigned int* tmd, unsigned int* tid) { *tad+=mi.tavgd; *tmd=std::max(*tmd,mi.tmaxd); *tid=std::min(*tid,mi.tmind); for(size_t i=0;i<xi->size();i++) vc[i]+=mi.varcount[i]; }
-   void resetstats() { mi.tavgd=0.0; mi.tmaxd=0; mi.tmind=0; for(size_t i=0;i<xi->size();i++) mi.varcount[i]=0; }
+   void resetstats() { mi.tavgd=0.0; mi.tmaxd=0; mi.tmind=0; mi.tmind=std::numeric_limits<unsigned int>::max(); for(size_t i=0;i<xi->size();i++) mi.varcount[i]=0; }
    void setci() {}
    void draw(rn& gen);
    void draw_mpislave(rn& gen);
