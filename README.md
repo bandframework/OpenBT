@@ -7,6 +7,10 @@ The heart of OpenBT is a set of C++ tools that can be used directly _via_ the
 command line or indirectly through the `openbt` Python package or `RopenBT` R
 package, which wrap the tools.
 
+This repository was established by merging the contents of the original Bitbucket [OpenBT repository](https://bitbucket.org/mpratola/openbt/src/master/) with the [OpenBTMixing repository](https://github.com/jcyannotty/OpenBT), which was based off of the former. It, therefore, supersedes those two repositories, which will be frozen.  Releases resulting from this merging start with `v1.2.0`.
+
+This repository and its contents are being established and developed as part of [BAND framework](https://bandframework.github.io).
+
 ### Repository
 [![Build Sphinx Docs](https://github.com/bandframework/OpenBT/actions/workflows/build_docs.yml/badge.svg?branch=main)](https://github.com/bandframework/OpenBT/actions/workflows/build_docs.yml)
 [![Check Links](https://github.com/bandframework/OpenBT/actions/workflows/check_links.yml/badge.svg?branch=main)](https://github.com/bandframework/OpenBT/actions/workflows/check_links.yml)
