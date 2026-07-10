@@ -66,6 +66,8 @@ Once all tasks have been executed
   * New references?
   * Update citation?
   * Check links
+  * Confirm that main README is consistent with Python package README and
+    landing page of Sphinx docs
 
 * Review all documentation associated with the repository including examples to
   determine if any updates still need to be made and address on a feature branch
