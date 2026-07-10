@@ -49,7 +49,7 @@ examples.
 Refer to the getting started sections in the User Guide related to the tool or
 package that you intend to use.
 
-## Contributing to IBCDFO
+## Contributing to OpenBT
 
 Contributions are welcome in a variety of forms; see
 [Contributing](https://openbt.readthedocs.io/en/latest/contributing.html) in the
