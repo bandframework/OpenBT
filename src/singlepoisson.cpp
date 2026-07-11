@@ -59,9 +59,7 @@ double singlepoissonbrt::lm(sinfo& si)
 {
    singlepoissonsinfo& msi=static_cast<singlepoissonsinfo&>(si);
 
-   return logam(msi.sumy+ci.alpha)-(msi.sumy+ci.alpha)*log(msi.n+ci.beta);
-          // - sum i=1..n logam(yi+1.0), but this term cancels in 
-          // the accept/reject of birth/death proposal so we do not calculate it.
+   return ci.alpha*log(ci.beta)-logam(ci.alpha)+logam(msi.sumy+ci.alpha)-(msi.sumy+ci.alpha)*log(msi.n+ci.beta);
           // Note: should check if the cancelation is preserved for other
           //       MH moves or updates (it should, I think).
 
