@@ -143,7 +143,7 @@ public:
    void mpislave_bd(rn& gen);
    virtual sinfo* newsinfo() { return new sinfo; }
    virtual std::vector<sinfo*>& newsinfovec() { std::vector<sinfo*>* si= new std::vector<sinfo*>; return *si; }
-   virtual std::vector<sinfo*>& newsinfovec(size_t dim) { std::vector<sinfo*>* si = new std::vector<sinfo*>; si->resize(dim); for(size_t i=0;i<dim;i++) si->push_back(new sinfo); return *si; }
+   virtual std::vector<sinfo*>& newsinfovec(size_t dim) { std::vector<sinfo*>* si = new std::vector<sinfo*>; si->reserve(dim); for(size_t i=0;i<dim;i++) si->push_back(new sinfo); return *si; }
    void setf();  //set the vector of predicted values
    void setr();  //set the vector of residuals
    double f(size_t i) { return yhat[i]; }  //get the i'th predicted value
