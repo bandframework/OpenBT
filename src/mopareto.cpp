@@ -189,7 +189,7 @@ int main(int argc, char* argv[])
    //setup psbrt objects
    psbrt psbm1(mh1);
    psbm1.setxi(&xi); //set the cutpoints for this model object
-   psbrt psbm2(mh1);
+   psbrt psbm2(mh2);
    psbm2.setxi(&xi); //set the cutpoints for this model object
    psbrt psbm3(mh3);
    if(threeresponse) psbm3.setxi(&xi);
