@@ -133,10 +133,10 @@ public:
    void setmi(double pbd, double pb, size_t minperbot, bool dopert, double pertalpha, double pchgv, std::vector<std::vector<double> >* chgv)
              {mi.pbd=pbd; mi.pb=pb; mi.minperbot=minperbot; mi.dopert=dopert;
               mi.pertalpha=pertalpha; mi.pchgv=pchgv; mi.corv=chgv; }
-   void setstats(bool dostats) { mi.dostats=dostats; if(dostats) mi.varcount=new unsigned int[xi->size()]; }
+   void setstats(bool dostats) { mi.dostats=dostats; if(dostats) { delete[] mi.varcount; mi.varcount=new unsigned int[xi->size()](); } }
    void getstats(unsigned int* vc, double* tad, unsigned int* tmd, unsigned int* tid) { *tad=mi.tavgd; *tmd=mi.tmaxd; *tid=mi.tmind; for(size_t i=0;i<xi->size();i++) vc[i]=mi.varcount[i]; }
    void addstats(unsigned int* vc, double* tad, unsigned int* tmd, unsigned int* tid) { *tad+=mi.tavgd; *tmd=std::max(*tmd,mi.tmaxd); *tid=std::min(*tid,mi.tmind); for(size_t i=0;i<xi->size();i++) vc[i]+=mi.varcount[i]; }
-   void resetstats() { mi.tavgd=0.0; mi.tmaxd=0; mi.tmind=0; mi.tmind=std::numeric_limits<unsigned int>::max(); for(size_t i=0;i<xi->size();i++) mi.varcount[i]=0; }
+   void resetstats() { mi.tavgd=0.0; mi.tmaxd=0; mi.tmind=std::numeric_limits<unsigned int>::max(); for(size_t i=0;i<xi->size();i++) mi.varcount[i]=0; }
    void setci() {}
    void draw(rn& gen);
    void draw_mpislave(rn& gen);
