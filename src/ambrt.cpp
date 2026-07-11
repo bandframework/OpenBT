@@ -748,9 +748,9 @@ void ambrt::kldivinfl(std::vector<double>& klinfl, double* sigma)
     for(size_t i=0;i<di->n;i++) {
       if(temp[i]==std::numeric_limits<double>::infinity()) {
         klinfl[i]=temp[i];
-        break;
+//        break;
       }
-      else {
+      else if(klinfl[i]!=std::numeric_limits<double>::infinity()) {
         double stdres = resid[i]/sigma[i];
         double stdres2 = stdres*stdres;
         klinfl[i] = -0.5*std::log(2*3.14159)-std::log(sigma[i])-0.5*stdres2;
@@ -775,9 +775,9 @@ void ambrt::cpoinfl(std::vector<double>& cpoinfl, double* sigma)
     for(size_t i=0;i<di->n;i++) {
       if(temp[i]==std::numeric_limits<double>::infinity()) {
         cpoinfl[i]=temp[i];
-        break;
+//        break;
       }
-      else {
+      else if(cpoinfl[i]!=std::numeric_limits<double>::infinity()) {
         double stdres = resid[i]/sigma[i];
         double stdres2 = stdres*stdres;
         cpoinfl[i]=std::sqrt(2*3.14159)*sigma[i]*std::exp(stdres2/2.0);
