@@ -10,7 +10,8 @@
 class crn: public rn
 {
 //typedefs
-   typedef std::default_random_engine genD;
+//   typedef std::default_random_engine genD;
+   typedef std::minstd_rand0 genD; // pinned: mpi_resetrn assumes single-word streamed state
    typedef std::normal_distribution<double> norD;
    typedef std::uniform_real_distribution<double> uniD;
    typedef std::chi_squared_distribution<double> chiD;
@@ -29,7 +30,8 @@ public:
    int get_df()  {return df;}
    void set_seed(int seed);
    void set_gam(double alpha,double beta);
-   std::default_random_engine get_engine_state();
+//   std::default_random_engine get_engine_state();
+   std::minstd_rand0 get_engine_state();
    void set_engine_state(std::stringstream& state);
 private:
    int df;

@@ -40,7 +40,8 @@ void crn::set_seed(int seed)
    // gen = new genD(seed);
    gen->seed(seed);
 }
-std::default_random_engine crn::get_engine_state()
+//std::default_random_engine crn::get_engine_state()
+std::minstd_rand0 crn::get_engine_state()
 {
    return *gen;
 }

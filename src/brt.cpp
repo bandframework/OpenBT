@@ -528,6 +528,9 @@ void brt::local_ompallsuff(dinfo di, tree::npv bnv,std::vector<sinfo*>& siv)
 
 //--------------------------------------------------
 // reset random number generator in MPI so it's the same on all nodes.
+// Note: assumes crn's engine streams its entire state as one integer token.
+//       True for minstd_rand0, pinned in crn.h.  Do not switch to mt199937
+//       et al. without rewriting this exchange.
 void brt::mpi_resetrn(rn& gen)
 {
 #ifdef _OPENMPI
