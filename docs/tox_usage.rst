@@ -2,7 +2,304 @@
 
 Developer Environment
 =====================
-.. _tox: https://tox.wiki/en/latest/index.html
 
-.. todo::
-    Sarthak to write this
+Tox
+---
+.. _tox Usage: https://tox.wiki/en/latest/index.html
+.. _Oliver Bestwalter: https://youtu.be/PrAyvH-tm8E
+
+Developers are free to setup whatever environment that they may need to
+facilitate their work.  However, the |openbt| Python package includes a
+`tox Usage`_ setup, which developers can also use to automatically setup and
+manage dedicated virtual environments for different predefined development tasks.
+
+Development with |tox|
+~~~~~~~~~~~~~~~~~~~~~~
+
+The following is a rough guide to help install |tox| as a command line tool in
+a dedicated, minimal virtual environment. |tox| is made available with
+no need to manually activate its virtual environment.
+
+.. note::
+    Developers that would like to use |tox| should, at the very least, learn
+    enough about it that they understand the difference between running ``tox``
+    and ``tox -r``.
+
+.. code-block:: console
+
+    $ cd $HOME/local/venv
+    $ deactivate
+    $ /path/to/desired/python --version
+    $ /path/to/desired/python -m venv $HOME/local/venv/.toxbase
+    $ ./.toxbase/bin/python -m pip list
+    $ ./.toxbase/bin/python -m pip install --upgrade pip setuptools
+    $ ./.toxbase/bin/python -m pip install tox
+    $ ./.toxbase/bin/python -m pip list
+    $ ./.toxbase/bin/tox --version
+
+To avoid having to activate ``.toxbase`` every time we would like to work with
+|tox|, we setup |tox| in ``PATH``.  Note that developers can use this single
+|tox| installation for multiple projects.  Please replace ``.bash_profile``
+with the appropriate shell configuration file and tailor the following to your
+needs.
+
+.. code-block:: console
+
+    $ mkdir -p $HOME/local/bin
+    $ ln -s $HOME/local/venv/.toxbase/bin/tox $HOME/local/bin/tox
+    $ vi $HOME/.bash_profile
+    $ . $HOME/.bash_profile
+    $ which tox
+    $ tox --version
+
+No work will be carried out by default with the calls ``tox`` and ``tox -r``.
+
+The following tasks can be run from within the directory hierarchy that contains
+the |openbt| |tox| configuration file ``/path/to/OpenBT/openbt_pypkg/tox.ini``:
+
+* ``tox -r -e nocoverage``
+
+  * Execute the full test suite for the |openbt| Python package using the code
+    installed into Python.
+
+* ``tox -r -e coverage``
+
+  * Execute the full test suite for the |openbt| Python package and save
+    coverage results to a coverage file.
+  * The test runs the package code in the local clone rather than code installed
+    into Python so that coverage results are clean and straightforward.
+  * If the environment variable ``COVERAGE_FILE`` is set, then this is the
+    coverage file that will be written to.  If it is not specified, then the
+    coverage results are written to ``.coverage_openbt``.
+
+* ``tox -r -e report``
+
+  * It is intended that this be run after or with ``coverage``.
+  * Display a code coverage report for the |openbt| package's full test suite
+    and generate XML and HTML versions of the report.
+  * The environment variables ``COVERAGE_XML`` and ``COVERAGE_HTML`` can be
+    provided to specify the names of the files that the associated reports
+    should be written to.  If ``COVERAGE_XML`` is not specified, the XML report
+    is written to ``coverage.xml``.  If ``COVERAGE_HTML`` is not provided, the
+    HTML report is written to ``htmlcov``.
+
+* ``tox -r -e check``
+
+  * Run several checks on the code to report possible issues.
+  * No files are altered automatically by this task.
+
+* ``tox -r -e html``
+
+  * Generate and serve the |openbt| documentation locally as HTML via a local
+    server at ``http://127.0.0.1:8000``.  The browser reloads automatically
+    whenever documentation source files are changed.
+
+* ``tox -r -e pdf``
+
+  * Generate and render the |openbt| documentation locally as a PDF file.
+  * Users are responsible for installing ``make`` and a compatible LaTeX
+    installation for immediate use by |tox|.
+
+Additionally, you can run any combination of the above such as
+``tox -r -e report,coverage``.
+
+Direct use of |tox| virtual environments
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Many of the |tox| tasks will build the |openbt| binary automatically each time
+they are run, which can significantly slow development work.  In such cases, a
+developer will likely start their work by creating a clean virtual environment
+for their task using ``tox -r`` and subsequently load and work in that virtual
+environment directly.
+
+Developers can inspect ``tox.ini`` to see what commands are run by their task
+and adapt these for their work.
+
+The following example shows how to run only a single test case using the
+``coverage`` virtual environment setup by |tox|.
+
+.. code-block:: console
+
+    $ cd /path/to/OpenBT/openbt_pypkg
+    $ tox -r -e coverage
+    $ . ./.tox/coverage/bin/activate
+    $ which python
+    $ python --version
+    $ python -m pip list
+    $ python -m pytest openbt.tests.test_brt
+
+Note that using the ``coverage`` virtual environment directly can be
+particularly useful since the package is installed in editable mode and
+therefore facilitates interactive development and testing of the Python code.
+
+|Tox|'s ``-r`` flag takes a conservative approach by wiping and fully
+rebuilding the virtual environment from scratch on every invocation, which
+guarantees a clean state but adds overhead each time.  For iterative work this
+accumulates quickly.  The ``html`` environment illustrates how to set up the
+environment once and then work flexibly inside it rather than letting |tox|
+drive every step.
+
+When |tox| runs the ``html`` environment it launches ``sphinx-autobuild``, a
+live-reload server.  A developer who wants to invoke ``sphinx-build`` with
+specific flags, rebuild on demand, or simply skip the server overhead can
+instead create the environment once and activate it directly:
+
+.. code-block:: console
+
+    $ cd /path/to/OpenBT/openbt_pypkg
+    $ tox -r -e html
+    $ # Press Ctrl+C to stop sphinx-autobuild once the environment is ready.
+    $ . ./.tox/html/bin/activate
+    $ which sphinx-build
+    $ sphinx-build -W -E -b html ../docs ../docs/build_html
+
+On subsequent documentation iterations only the ``sphinx-build`` command is
+needed — the environment is already activated and no |tox| rebuild is required.
+Omitting ``-E`` on later runs reuses Sphinx's cached environment and speeds up
+incremental builds.  The live-reload server can also be started directly from
+the activated environment when it is useful:
+
+.. code-block:: console
+
+    $ sphinx-autobuild -W -b html ../docs ../docs/build_html
+
+Eigen
+-----
+.. _Eigen: https://gitlab.com/libeigen/eigen
+
+Eigen_ is a header-only C++ template library for linear algebra.  Being
+header-only means there is no compiled library to link against, it is used
+purely by including its headers directly into source files.
+
+Installation
+~~~~~~~~~~~~
+
+Eigen does not need to be installed manually.  The |openbt| Meson build system
+handles Eigen automatically in two steps.  First, Meson searches for an
+existing system-wide Eigen installation discoverable |via| ``pkg-config``.  If
+found, that installation is used for the build.  If not found, Meson falls back
+to the ``subprojects/eigen.wrap`` file, which instructs it to download Eigen
+5.0.1 automatically from GitLab and use it internally for that build.  As a
+result, Eigen is always available to the build regardless of whether it is
+installed on the system.
+
+Developers on macOS who prefer to have a system-wide installation can install
+Eigen |via| Homebrew:
+
+.. code-block:: console
+
+    $ brew install eigen
+
+
+Meson Build
+-----------
+.. _Meson: https://mesonbuild.com
+.. _ninja: https://ninja-build.org
+
+The |openbt| Python package uses the Meson_ build system together with its
+ninja_ backend to compile the C++ command line tools during installation.
+Meson must be installed and available on ``PATH`` before building the package.
+Please refer to :ref:`get_started_cpp:Meson installation` for detailed
+installation instructions.
+
+Build Process with Python
+~~~~~~~~~~~~~
+
+The Meson build is not invoked directly by developers.  It is triggered
+automatically when the |openbt| Python package is installed |via|
+
+.. code-block:: console
+
+    $ cd /path/to/OpenBT/openbt_pypkg
+    $ python -m pip install .
+
+or in editable mode |via|
+
+.. code-block:: console
+
+    $ python -m pip install -e .
+
+Internally, ``setup.py`` defines a custom ``build_clt`` command that runs the
+following three Meson commands sequentially from within the ``cpp/`` directory:
+
+.. code-block:: console
+
+    $ meson setup --wipe --clearcache --buildtype=release builddir \
+          -Dprefix=/path/to/src/openbt -Duse_mpi=true -Dpypkg=true
+    $ meson compile -v -C builddir
+    $ meson install --quiet -C builddir
+
+The ``--wipe`` flag deletes and recreates ``builddir`` before every install,
+ensuring a clean compile from scratch.  The ``--clearcache`` flag clears
+Meson's dependency detection cache, forcing it to re-detect the compiler, MPI,
+and Eigen installations.
+
+Files and Directories Created
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A successful ``pip install`` creates the following files and directories:
+
+* ``openbt_pypkg/cpp/builddir/`` — Meson's working build directory.  Ninja
+  compiles all C++ source files into object files.  This directory is wiped and recreated on
+  every ``pip install`` and can be deleted safely at any time.
+
+* ``openbt_pypkg/src/openbt/bin/`` — The eight compiled C++ command line
+  tools installed by ``meson install``:
+
+  .. code-block:: console
+
+      openbtcli         openbtpred        openbtmixingwts
+      openbtmixing      openbtmixingpred  openbtmopareto
+      openbtsobol       openbtvartivity
+
+  .. note::
+      Only ``openbtcli``, ``openbtpred``, and ``openbtmixingwts`` are
+      included in the distributed package.  All eight are compiled and
+      installed to disk regardless.
+
+* ``openbt_pypkg/src/openbt/include/eigen3/`` — Eigen headers installed
+  under the package prefix as a side effect of Eigen's own Meson install
+  step, regardless of whether Eigen came from the system or the bundled
+  ``subprojects/eigen.wrap``.
+
+* ``openbt_pypkg/src/openbt/lib/pkgconfig/eigen3.pc`` — A ``pkg-config``
+  file for the installed Eigen, with its ``prefix`` pointing into
+  ``src/openbt/``.
+
+* ``openbt_pypkg/src/openbt/_version.py`` — Written by ``setuptools_scm``
+  from the current git tag, not by Meson.
+
+Caching
+~~~~~~~
+
+There are four caching layers involved in the build, each with different
+behaviour on a recompile:
+
+* ``subprojects/packagecache/`` — Stores downloaded Eigen tarballs
+  (``eigen-5.0.1.tar.bz2`` and its patch) so that Meson does not re-download
+  them on every build.  ``--clearcache`` does not clear this directory; it
+  persists intentionally across builds.
+
+* ``cpp/builddir/`` — Ninja's compile cache of object files.  Because
+  ``meson setup --wipe`` is run on every ``pip install``, this cache is never
+  reused between installs and is always rebuilt from scratch.
+
+* ``src/openbt/{bin,include,lib}/`` — The install destination written by
+  ``meson install``.  This is the most problematic caching layer: ``meson
+  install`` overlays new files onto these directories but never removes
+  stale ones.  If a binary is renamed, a tool is removed from the build, or
+  Eigen headers change, the old files persist silently.  When the build
+  produces unexpected behaviour, these directories should be deleted manually
+  before reinstalling:
+
+  .. code-block:: console
+
+      $ rm -rf openbt_pypkg/src/openbt/bin/
+      $ rm -rf openbt_pypkg/src/openbt/include/
+      $ rm -rf openbt_pypkg/src/openbt/lib/
+
+* ``openbt_pypkg/.tox/`` — |tox| virtual environments each contain their own
+  installed copy of the |openbt| package and compiled binaries.  Running
+  ``tox`` without ``-r`` reuses the existing environment and does not
+  reinstall |openbt| or rerun the Meson build.  Running ``tox -r`` forces a
+  clean environment rebuild and a full ``pip install`` from scratch.

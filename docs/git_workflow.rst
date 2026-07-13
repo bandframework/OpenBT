@@ -32,3 +32,57 @@ informal git workflow.  A minimal set of rules are
 
 Developers are encouraged to create PRs early during branch development to begin
 and record a dialogue with potential reviewers in the PR.
+
+GitHub Actions
+--------------
+
+All of the following actions run automatically on every push and pull request to
+``main``.  A merge should only proceed once all actions pass.
+
+Documentation
+~~~~~~~~~~~~~
+
+* **Check Spelling** — Checks all ``.rst`` and ``.md`` files in the repository
+  for typographic errors using the ``typos`` tool with the ``typos.toml``
+  configuration file.
+
+* **Check Links** — Checks all ``.rst`` and ``.md`` files for broken URLs using
+  the ``lychee`` tool.  In addition to running on push and pull request, this
+  action runs on a weekly schedule to catch links that break between
+  contributions.
+
+* **Build Sphinx Docs** — Builds the |openbt| documentation in both HTML and
+  PDF format using |tox|.  The built documents are uploaded as a downloadable
+  artifact so that contributors can review rendered documentation without
+  needing a local build environment.
+
+Python Package Testing
+~~~~~~~~~~~~~~~~~~~~~~
+
+* **Test OpenBT Python Source Distribution** — The primary test action.  Builds
+  a Python source distribution and tests it across a matrix of six operating
+  systems, two MPI implementations (Open MPI and MPICH), and five Python
+  versions (3.10–3.14).  The built source distribution is also uploaded as an
+  artifact for manual upload to PyPI at release time.  This action additionally
+  runs on published releases.
+
+* **Test OpenBT Developer-mode Installation** — Tests the editable installation
+  (``pip install -e .``) on a reduced matrix.  MPI is intentionally installed
+  |via| |pip| rather than a system package manager to confirm that pip-installed
+  MPI implementations work correctly.
+
+* **Test OpenBT in Anaconda** — Tests installation inside a conda environment
+  across six operating systems using a prebuilt Open MPI installed |via| |pip|.
+
+* **Measure OpenBT Python Coverage** — Runs the full Python test suite with
+  coverage measurement using |tox| and uploads the raw coverage file, XML
+  report, and HTML report as artifacts.
+
+C++ Tools Testing
+~~~~~~~~~~~~~~~~~
+
+* **Test OpenBT C++ Command Line Tools** — Builds and tests the C++ command
+  line tools directly across a matrix of six operating systems and two MPI
+  implementations, independently of the Python package.  Prints dynamic library
+  linkage information for each built binary so that developers can verify the
+  correct MPI implementation was linked.

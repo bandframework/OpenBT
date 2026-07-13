@@ -40,6 +40,14 @@ This package is being developed as part of |band| framework_.
 .. toctree::
    :numbered:
    :maxdepth: 1
+   :caption: R User Guide:
+
+   get_started_r
+   examples_r
+
+.. toctree::
+   :numbered:
+   :maxdepth: 1
    :caption: Python User Guide:
 
    get_started_py
