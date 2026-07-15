@@ -71,7 +71,11 @@ public:
    virtual std::vector<sinfo*>& newsinfovec(size_t dim) { std::vector<sinfo*>* si = new std::vector<sinfo*>; si->resize(dim); for(size_t i=0;i<dim;i++) si->push_back(new msinfo); return *si; }
    virtual void local_mpi_reduce_allsuff(std::vector<sinfo*>& siv);
    virtual void local_mpi_sr_suffs(sinfo& sil, sinfo& sir);
+   virtual void local_setr(diterator& diter);
    void pr();
+   void cookdinfl(std::vector<double>& cdinfl, double* sigma); //Cook's distance
+   void kldivinfl(std::vector<double>& klinfl, double* sigma); //KL-divergence based influence metric
+   void cpoinfl(std::vector<double>& cpoinfl, double* sigma); //CPO^-1 based influence metric
 
    //--------------------
    //data

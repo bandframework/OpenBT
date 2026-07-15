@@ -57,3 +57,9 @@ version of the Python package is managed automatically by the configuration of
 ``setuptools-scm`` in ``pyproject.toml``.  The version identifier for the source
 distribution constructed from a tagged commit will automatically be set to the
 tag's name.  Only these distributions should be distributed officially.
+
+R package
+---------
+.. _DESCRIPTION file: https://github.com/bandframework/OpenBT/blob/main/Ropenbt/DESCRIPTION 
+
+The version of the R package is specified in the package's `DESCRIPTION file`_.

@@ -155,6 +155,9 @@ public:
 //   void loadtree(size_t nn, int* id, int* v, int* c, double* theta);  //load tree from vector input format
    void loadtree(size_t iter, size_t m, std::vector<int>& nn, std::vector<std::vector<int> >& id, std::vector<std::vector<int> >& v,
                   std::vector<std::vector<int> >& c, std::vector<std::vector<double> >& theta);
+   void cookdinfl(std::vector<double>& cdinfl); //Cook's distance
+   void kldivinfl(std::vector<double>& klinfl); //KL-divergence based influence metric
+   void cpoinfl(std::vector<double>& cpoinfl); //CPO^-1 based influence metric
    //--------------------
    //data
    tree t;
