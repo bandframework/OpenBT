@@ -3,7 +3,7 @@ OpenBT is an extensible software project that implements a variety of Bayesian
 tree models for scientific and industry applications, including regression,
 model mixing, sensitivity analysis and multiobjective optimization.  
 
-The heart of OpenBT is a set of C++ tools that can be used directly _via_ the
+The heart of OpenBT is a set of C++ tools that can be used directly via the
 command line or indirectly through the `openbt` Python package or `RopenBT` R
 package, which wrap the tools.
 
@@ -31,12 +31,12 @@ send an email to the OpenBT development team
 ## Documentation
 
 [User and Developer Guides](https://openbt.readthedocs.io) are hosted on
-ReadTheDocs.  Please refer to those documents for information regarding
+ReadTheDocs.  Please refer to those documents for information including
 examples.
 
 ## Installation & Testing
-Refer to the getting started sections in the User Guide related to the tool or
-package that you intend to use.
+Refer to the getting started sections in the User Guides related to the tools or
+packages that you intend to use.
 
 ## Contributing to OpenBT
 
@@ -48,9 +48,9 @@ Developer Guide.
 
 ```
 @techreport{openbt2026,
-  author      = {Matt Pratola and John Yannotty},
+  author      = {Matthew Pratola and John Yannotty},
   title       = {{OpenBT 1.2.0} User Guides},
-  institution = {TBD},
+  institution = {Indiana University Bloomington},
   number      = {Version 1.2.0},
   year        = {2026},
   url         = {https://openbt.readthedocs.io/}

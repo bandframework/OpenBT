@@ -46,12 +46,12 @@ send an email to the OpenBT development team
 ## Documentation
 
 [User and Developer Guides](https://openbt.readthedocs.io) are hosted on
-ReadTheDocs.  Please refer to those documents for information regarding
+ReadTheDocs.  Please refer to those documents for information including
 examples.
 
 ## Installation & Testing
-Refer to the getting started sections in the User Guide related to the tool or
-package that you intend to use.
+Refer to the getting started sections in the User Guides related to the tools or
+packages that you intend to use.
 
 ## Contributing to OpenBT
 
