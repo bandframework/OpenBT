@@ -8,6 +8,8 @@
 #include "tree.h"
 #include "treefuns.h"
 #include "brt.h"
+#include <algorithm>  // std::set_union, std::set_intersection, std::sort
+#include <unordered_map>  
 
 using std::cout;
 using std::endl;
@@ -90,7 +92,7 @@ void splitall(tree::tree_p t, tree::npv& tlefts, tree::npv& trights);
 
 //--------------------------------------------------
 // Functions to support calculation of Sobol indices for BART
-// Based on Hiroguchi, Pratola and Santner (2020).
+// Based on Horiguchi, Pratola and Santner (2020).
 //--------------------------------------------------
 double probxnoti_termk(size_t i, size_t k, std::vector<std::vector<double> >& a, std::vector<std::vector<double> >& b, std::vector<double>& minx, std::vector<double>& maxx);
 double probxi_termk(size_t i, size_t k, std::vector<std::vector<double> >& a, std::vector<std::vector<double> >& b, std::vector<double>& minx, std::vector<double>& maxx);
@@ -101,8 +103,22 @@ double probxij_termkl(size_t i, size_t j, size_t k, size_t l, std::vector<std::v
 double probxall_termkl(size_t k, size_t l, std::vector<std::vector<double> >& a, std::vector<std::vector<double> >& b, std::vector<double>& minx, std::vector<double>& maxx);
 
 //--------------------------------------------------
+// Additional functions to support calculation of Shapley indices for BART
+// Based on Horiguchi and Pratola (2022).
+//--------------------------------------------------
+double probxnotP_termk_sub(size_t k, std::vector<std::vector<double> >& a, 
+   std::vector<std::vector<double> >& b, std::vector<double>& minx, std::vector<double>& maxx,
+   std::vector<bool> &dims);
+double probxP_termk_sub(size_t k, std::vector<std::vector<double> >& a, 
+   std::vector<std::vector<double> >& b, std::vector<double>& minx, std::vector<double>& maxx,
+   std::vector<bool> &dims);
+double probxP_termkl_sub(size_t k, size_t l, std::vector<std::vector<double> >& a, 
+   std::vector<std::vector<double> >& b, std::vector<double>& minx, std::vector<double>& maxx,
+   std::vector<bool> &dims);
+
+//--------------------------------------------------
 // This function only used for determining Pareto front/set.
-// Based on Hiroguchi, Santner, Sun and Pratola (2020).
+// Based on Horiguchi, Santner, Sun and Pratola (2020).
 //--------------------------------------------------
 double probxall_termkl_rect(size_t k, size_t l, std::vector<std::vector<double> >& a0, 
    std::vector<std::vector<double> >& b0, std::vector<std::vector<double> >& a1, 
@@ -110,6 +126,25 @@ double probxall_termkl_rect(size_t k, size_t l, std::vector<std::vector<double> 
 
 std::vector<size_t> find_pareto_front(size_t start, size_t end, std::list<std::vector<double> > theta);
 bool not_dominated(size_t index, std::vector<size_t> R, std::list<std::vector<double> > theta);
+void combine_ensembles(size_t p, xinfo& xi, std::vector<std::unordered_map<double, size_t> >& ximaps, std::vector<double>& minx, std::vector<double>& maxx, 
+   std::vector<std::vector<double> >& a1, std::vector<std::vector<double> >& b1, std::list<std::vector<double> >& ltheta1, 
+   std::vector<std::vector<double> >& a2, std::vector<std::vector<double> >& b2, std::vector<double>& theta2, double fmean2, 
+   std::vector<std::vector<double> >& asol, std::vector<std::vector<double> >& bsol, std::list<std::vector<double> >& thetasol, 
+   bool to_clear_old_ens);
+
+//--------------------------------------------------
+// This function only used determining the hyperrectangle that should
+// be reweighted due to influential observation.
+// Based on Pratola, George and McCulloch (2020).
+//--------------------------------------------------
+double probxall_term_rect(std::vector<double>& a0, 
+   std::vector<double>& b0, std::vector<double>& a1, 
+   std::vector<double>& b1, std::vector<double>& minx, std::vector<double>& maxx, std::vector<double>& aout, std::vector<double>& bout);
+
+void unionxall_term_rect(std::vector<double>& a0, 
+   std::vector<double>& b0, std::vector<double>& a1, 
+   std::vector<double>& b1, std::vector<double>& minx, std::vector<double>& maxx, std::vector<double>& aout, std::vector<double>& bout);
+
 
 //--------------------------------------------------
 // Functions to Model Mixing with BART and/or Vector Parameters

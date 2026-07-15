@@ -269,6 +269,54 @@ void mbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv)
 #endif
 }
 
+void mbrt::local_setr(diterator& diter)
+{
+   tree::tree_p bn;
+
+   for(;diter<diter.until();diter++) {
+      bn = t.bn(diter.getxp(),*xi);
+      resid[*diter] = di->y[*diter] - bn->gettheta();
+   }
+}
+
+//--------------------------------------------------
+// Influence metrics.  See Pratola, George and McCulloch (2021)
+
+// Cook's distance
+void mbrt::cookdinfl(std::vector<double>& cdinfl, double* sigma)
+{
+   brt::cookdinfl(cdinfl);
+   for(size_t i=0;i<di->n;i++) {
+      double stdres = resid[i]/sigma[i];
+      double stdres2 = stdres*stdres;
+      cdinfl[i] *= stdres2;
+   }
+}
+
+//KL-divergence based influence metric
+void mbrt::kldivinfl(std::vector<double>& klinfl, double* sigma)
+{
+   brt::kldivinfl(klinfl);
+   for(size_t i=0;i<di->n;i++)
+      if(klinfl[i]!=std::numeric_limits<double>::infinity()) {
+         double stdres = resid[i]/sigma[i];
+         double stdres2 = stdres*stdres;
+         klinfl[i]=-0.5*std::log(2*3.14159)-std::log(sigma[i])-0.5*stdres2;
+      }
+}
+
+//CPO^-1 based influence metric
+void mbrt::cpoinfl(std::vector<double>& cpoinfl, double* sigma)
+{
+   brt::cpoinfl(cpoinfl);
+   for(size_t i=0;i<di->n;i++)
+      if(cpoinfl[i]!=std::numeric_limits<double>::infinity()) {
+         double stdres = resid[i]/sigma[i];
+         double stdres2 = stdres*stdres;
+         cpoinfl[i]=std::sqrt(2*3.14159)*sigma[i]*std::exp(stdres2/2.0);
+      }
+}
+
 //--------------------------------------------------
 //pr for brt
 void mbrt::pr()
