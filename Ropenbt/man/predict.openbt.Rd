@@ -7,8 +7,9 @@
 }
 \usage{
 \method{predict}{openbt}(
-object,
+object=NULL,
 x.test=NULL,
+f.test=matrix(1, nrow = 1, ncol = 2),
 tc=2,
 fmean=fit$fmean,
 q.lower=0.025,
@@ -17,6 +18,7 @@ q.upper=0.975, ...)
 \arguments{
   \item{object}{Object of type \code{OpenBT_posterior} from a previous call to \code{openbt()}}
   \item{x.test}{New input settings in the form of an \code{npred x p} matrix at which to construct predictions.  Defaults to the training inputs.}
+  \item{f.test}{For eventual model mixing support.}
   \item{tc}{Number of CPU cores to use for parallel computing.}
   \item{fmean}{Mean-centering vector for the training data.  Defaults to the value used by \code{openbt()} when fitting the model.  Usually should be left to the default.}
   \item{q.lower}{Lower quantile to return.}
