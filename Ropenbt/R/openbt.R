@@ -653,7 +653,7 @@ if(fit$modeltype==MODEL_MIXBART){
   res$m.upper=apply(res$mdraws,2,quantile,q.upper)
   res$smean=apply(res$sdraws,2,mean)
   res$ssd=apply(res$sdraws,2,sd)
-  res$s.5=apply(res$sdraws,2,median)
+  res$s.5=apply(res$sdraws,2,quantile,0.5)
   res$s.lower=apply(res$sdraws,2,quantile,q.lower)
   res$s.upper=apply(res$sdraws,2,quantile,q.lower)
   res$pdraws=NULL
@@ -2218,8 +2218,9 @@ loadRData <- function(fname)
 }
 
 
-print.OpenBT_posterior<-function(post)
+print.OpenBT_posterior<-function(x, ...)
 {
+   post = x
    MODEL_BT=1
    MODEL_BINOMIAL=2
    MODEL_POISSON=3
@@ -2262,13 +2263,15 @@ print.OpenBT_posterior<-function(post)
    summary(post$xicuts)
 }
 
-summary.OpenBT_posterior<-function(post)
+summary.OpenBT_posterior<-function(object, ...)
 {
+   post = object
    cat("No summary method for object.\n")
 }
 
-print.OpenBT_predict<-function(pred)
+print.OpenBT_predict<-function(x, ...)
 {
+   pred = x
    MODEL_BT=1
    MODEL_BINOMIAL=2
    MODEL_POISSON=3
@@ -2289,20 +2292,23 @@ print.OpenBT_predict<-function(pred)
    cat("Variance quantiles: ",pred$q.lower,",",pred$q.upper,"\n\n")
 }
 
-summary.OpenBT_predict<-function(pred)
+summary.OpenBT_predict<-function(object, ...)
 {
+   pred = object
    cat("No summary method for object.\n")
 }
 
-print.OpenBT_sobol<-function(sobol)
+print.OpenBT_sobol<-function(x, ...)
 {
+   sobol = x
    cat("OpenBT Sobol Indices\n")
    cat(ncol(sobol$vidraws), " variables.\n")
    cat(nrow(sobol$vidraws), " realizations.\n")
 }
 
-summary.OpenBT_sobol<-function(sobol)
+summary.OpenBT_sobol<-function(object, ...)
 {
+   sobol = object
    cat("Summary of Posterior Sobol Sensitivity Indices\n")
 
    cat("Expected Sobol Indices (Mean)\n")
@@ -2316,23 +2322,26 @@ summary.OpenBT_sobol<-function(sobol)
    print(sobol$sij.sd)
 }
 
-plot.OpenBT_sobol<-function(sobol)
+plot.OpenBT_sobol<-function(x, ...)
 {
+   sobol = x
    par(mfrow=c(3,1))
    boxplot(sobol$sidraws,ylab="Sobol Sensitivity",main="First Order Sobol Indices",xlab="Variables")
    boxplot(sobol$sijdraws,ylab="Sobol Sensitivity",main="Two-way Sobol Indices",xlab="Variables")
    boxplot(sobol$tsidraws,ylab="Sobol Sensitivity",main="Total Sobol Indices",xlab="Variables")
 }
 
-print.OpenBT_vartivity<-function(vartivity)
+print.OpenBT_vartivity<-function(x, ...)
 {
+   vartivity = x
    cat("OpenBT Variable Activity\n")
    cat(ncol(vartivity$vdraws), " variables.\n")
    cat(nrow(vartivity$vdraws), " realizations.\n")
 }
 
-summary.OpenBT_vartivity<-function(vartivity)
+summary.OpenBT_vartivity<-function(object, ...)
 {
+   vartivity = object
    cat("Summary of Posterior Variable Activity\n")
 
    p=length(vartivity$mvdraws)
@@ -2374,16 +2383,18 @@ summary.OpenBT_vartivity<-function(vartivity)
    }
 }
 
-plot.OpenBT_vartivity<-function(vartivity)
+plot.OpenBT_vartivity<-function(x, ...)
 {
+   vartivity = x
    par(mfrow=c(1,2))
    yrange=c(0,max(max(vartivity$vdraws),max(vartivity$vdrawsh)))
    boxplot(vartivity$vdraws,ylab="% node splits",main="Mean Trees",xlab="Variables",ylim=yrange)
    boxplot(vartivity$vdrawsh,ylab="% node splits",main="Variance Trees",xlab="Variables",ylim=yrange)
 }
 
-summary.OpenBT_cutinfo<-function(xi)
+summary.OpenBT_cutinfo<-function(object, ...)
 {
+   xi = object
    p=length(xi)
    cat("Number of variables: ",p,"\n")
    cat("Number of cutpoints per variable\n")
@@ -2393,8 +2404,9 @@ summary.OpenBT_cutinfo<-function(xi)
    }
 }
 
-print.OpenBT_cutinfo<-function(xi)
+print.OpenBT_cutinfo<-function(x, ...)
 {
+   xi = x
    summary.OpenBT_cutinfo(xi)
 }
 
@@ -2545,7 +2557,7 @@ mixingwts.openbt = function(
     #Now populate the summary stat matrices -- n X k matrices
     mean_matrix[,j] = apply(wt_list[[j]], 2, mean)
     sd_matrix[,j] = apply(wt_list[[j]], 2, sd)
-    med_matrix[,j] = apply(wt_list[[j]], 2, median)
+    med_matrix[,j] = apply(wt_list[[j]], 2, quantile,0.5)
     lb_matrix[,j] = apply(wt_list[[j]], 2, quantile,q.lower)
     ub_matrix[,j] = apply(wt_list[[j]], 2, quantile,q.upper)
   }

@@ -7,7 +7,7 @@ Authors@R: c(person('Matthew', 'Pratola', role=c('aut','cre','cph'),email='mprat
 URL: http://www.github.com/bandframework/OpenBT
 Description: 
     This R package provides an R interface to the OpenBT library of Bayesian Tree models (https://www.github.com/bandframework/OpenBT).  For more information and examples, refer to the README at the root of the OpenBT repository.
-License: MIT
+License: MIT + file LICENSE
 Depends: R (>= 2.10)
 Imports: data.table, zip, emoa, Hmisc
 Suggests: 
