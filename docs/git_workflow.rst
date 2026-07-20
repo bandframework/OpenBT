@@ -3,6 +3,13 @@ Git Workflow
 Since we are currently standing this repository up, we are working with an
 informal git workflow.  A minimal set of rules are
 
+.. note::
+
+   If merge conflicts exist that block the merging of the PR through the GitHub
+   web interface, do **not** resolve the conflicts through the web interface,
+   which might result in unwanted side effects.  Rather, a gatekeeper should
+   resolve the conflicts in a local clone, merge locally, and push.
+
 #. No one should make direct commits to the ``main`` branch.
 #. Each addition and change should be made on a dedicated feature branch that is
    based off of the latest commit on the ``main`` branch.  Try to group related

@@ -1,26 +1,4 @@
 //     mbrt.h: Mean tree BT model class definition.
-//     Copyright (C) 2012-2016 Matthew T. Pratola, Robert E. McCulloch and Hugh A. Chipman
-//
-//     This file is part of OpenBT.
-//
-//     OpenBT is free software: you can redistribute it and/or modify
-//     it under the terms of the GNU Affero General Public License as published by
-//     the Free Software Foundation, either version 3 of the License, or
-//     (at your option) any later version.
-//
-//     OpenBT is distributed in the hope that it will be useful,
-//     but WITHOUT ANY WARRANTY; without even the implied warranty of
-//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//     GNU Affero General Public License for more details.
-//
-//     You should have received a copy of the GNU Affero General Public License
-//     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//     Author contact information
-//     Matthew T. Pratola: mpratola@gmail.com
-//     Robert E. McCulloch: robert.e.mculloch@gmail.com
-//     Hugh A. Chipman: hughchipman@gmail.com
-
 
 #ifndef GUARD_mbrt_h
 #define GUARD_mbrt_h
@@ -93,7 +71,11 @@ public:
    virtual std::vector<sinfo*>& newsinfovec(size_t dim) { std::vector<sinfo*>* si = new std::vector<sinfo*>; si->resize(dim); for(size_t i=0;i<dim;i++) si->push_back(new msinfo); return *si; }
    virtual void local_mpi_reduce_allsuff(std::vector<sinfo*>& siv);
    virtual void local_mpi_sr_suffs(sinfo& sil, sinfo& sir);
+   virtual void local_setr(diterator& diter);
    void pr();
+   void cookdinfl(std::vector<double>& cdinfl, double* sigma); //Cook's distance
+   void kldivinfl(std::vector<double>& klinfl, double* sigma); //KL-divergence based influence metric
+   void cpoinfl(std::vector<double>& cpoinfl, double* sigma); //CPO^-1 based influence metric
 
    //--------------------
    //data

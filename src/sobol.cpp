@@ -1,25 +1,4 @@
 //     sobol.cpp: Implement Sobol-based variable activity metrics for OpenBT.
-//     Copyright (C) 2020 Matthew T. Pratola, Akira Horiguchi
-//
-//     This file is part of OpenBT.
-//
-//     OpenBT is free software: you can redistribute it and/or modify
-//     it under the terms of the GNU Affero General Public License as published by
-//     the Free Software Foundation, either version 3 of the License, or
-//     (at your option) any later version.
-//
-//     OpenBT is distributed in the hope that it will be useful,
-//     but WITHOUT ANY WARRANTY; without even the implied warranty of
-//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//     GNU Affero General Public License for more details.
-//
-//     You should have received a copy of the GNU Affero General Public License
-//     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//     Author contact information
-//     Matthew T. Pratola: mpratola@gmail.com
-//     Akira Horiguchi: horiguchi.6@osu.edu
-
 
 #include <iostream>
 #include <string>
@@ -29,6 +8,7 @@
 #include <fstream>
 #include <vector>
 #include <limits>
+#include <chrono>
 
 #include "crn.h"
 #include "tree.h"
@@ -55,6 +35,13 @@ int main(int argc, char* argv[])
       folder=std::string(argv[1]);
       folder=folder+"/";
    }
+
+   //-----------------------------------------------------------
+   //random number generation
+   crn gen;
+   gen.set_seed(static_cast<long long>(std::chrono::high_resolution_clock::now()
+                                   .time_since_epoch()
+                                   .count()));
 
    //--------------------------------------------------
    //process args
@@ -262,6 +249,7 @@ int main(int argc, char* argv[])
 
    //objects where we'll store the realizations
    std::vector<std::vector<double> > Sidraws(rnd,std::vector<double>(p));
+   std::vector<std::vector<double> > Shidraws(rnd,std::vector<double>(p));
    std::vector<std::vector<double> > Sijdraws(rnd,std::vector<double>(p*(p-1)/2));
    std::vector<std::vector<double> > TSidraws(rnd,std::vector<double>(p));
    std::vector<double> V(rnd);
@@ -312,7 +300,7 @@ int main(int argc, char* argv[])
 
       // Calculate Sobol Indices
       if(i>=snd && i<end) {
-         ambm.sobol(Sidraws[ii], Sijdraws[ii], TSidraws[ii], V[ii], minx, maxx, p);  //calculate Sobol indices (unnormalized)
+         ambm.sobol(Sidraws[ii], Sijdraws[ii], TSidraws[ii], Shidraws[ii], V[ii], minx, maxx, p, gen);  //calculate Sobol indices (unnormalized)
          ii++;
       }
    }
@@ -370,6 +358,8 @@ int main(int argc, char* argv[])
    for(size_t i=0;i<rnd;i++) {
       for(size_t j=0;j<p;j++)
          omf << std::scientific << Sidraws[i][j] << " ";
+      // for(size_t j=0;j<p;j++)
+      //    omf << std::scientific << Shidraws[i][j] << " ";
       for(size_t j=0;j<Sijdraws[i].size();j++)
          omf << std::scientific << Sijdraws[i][j] << " ";
       for(size_t j=0;j<p;j++)
@@ -378,6 +368,17 @@ int main(int argc, char* argv[])
       omf << endl;
    }
    omf.close();
+
+   if(mpirank==0) cout << endl << "Saving Shapley indices...";
+
+   std::ofstream omf2(folder + modelname + ".shapley" + std::to_string(mpirank));
+   for(size_t i=0;i<rnd;i++) {
+      for(size_t j=0;j<p;j++)
+         omf2 << std::scientific << Shidraws[i][j] << " ";
+      omf2 << endl;
+   }
+   omf2.close();
+
 
    if(mpirank==0) cout << " done." << endl;
 

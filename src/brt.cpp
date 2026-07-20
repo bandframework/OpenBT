@@ -1,26 +1,4 @@
 //     brt.cpp: Base BT model class methods.
-//     Copyright (C) 2012-2016 Matthew T. Pratola, Robert E. McCulloch and Hugh A. Chipman
-//
-//     This file is part of OpenBT.
-//
-//     OpenBT is free software: you can redistribute it and/or modify
-//     it under the terms of the GNU Affero General Public License as published by
-//     the Free Software Foundation, either version 3 of the License, or
-//     (at your option) any later version.
-//
-//     OpenBT is distributed in the hope that it will be useful,
-//     but WITHOUT ANY WARRANTY; without even the implied warranty of
-//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//     GNU Affero General Public License for more details.
-//
-//     You should have received a copy of the GNU Affero General Public License
-//     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//     Author contact information
-//     Matthew T. Pratola: mpratola@gmail.com
-//     Robert E. McCulloch: robert.e.mculloch@gmail.com
-//     Hugh A. Chipman: hughchipman@gmail.com
-
 
 #include "brt.h"
 #include "brtfuns.h"
@@ -1044,6 +1022,97 @@ void brt::local_predict(diterator& diter)
       diter.sety(bn->gettheta());
    }
 }
+
+//--------------------------------------------------
+// Influence metrics.  See Pratola, George and McCulloch (2021)
+
+// Cook's distance
+void brt::cookdinfl(std::vector<double>& cdinfl)
+{
+   tree::tree_p tbn; //which bottom node is current x in?
+   std::map<tree::tree_p,size_t> bn_to_idx; //bottom node to index map
+   tree::npv bnv;
+   bnv.clear();
+   t.getbots(bnv);
+   size_t B=bnv.size();
+   std::vector<unsigned int> nodenums(B,0);
+
+   // initialize map
+   for(size_t i=0;i<B;i++) {
+      bn_to_idx[bnv[i]]=i;
+   }
+
+   // count up ni's on this local subset of data
+   double *xx;
+   for(size_t i=0;i<di->n;i++) {
+      xx = di->x + i*di->p;
+      tbn = t.bn(xx,*xi);
+      nodenums[bn_to_idx[tbn]]++;
+   }
+
+   // Sum up the ni's across all MPI threads
+   for(size_t i=0;i<B;i++)
+      MPI_Allreduce(MPI_IN_PLACE,&nodenums[i],1,MPI_UNSIGNED,MPI_SUM,MPI_COMM_WORLD);
+
+   // Cook's D for each obs xx
+   unsigned int ni;
+   for(size_t i=0;i<di->n;i++) {
+      xx = di->x + i*di->p;
+      tbn = t.bn(xx,*xi);
+      ni = nodenums[bn_to_idx[tbn]];
+      cdinfl[i]=((double)ni)/((double)B*((double)ni-1.0)*((double)ni-1.0));
+   }
+}
+
+//KL-divergence based influence metric
+void brt::kldivinfl(std::vector<double>& klinfl)
+{
+   tree::tree_p tbn; //which bottom node is current x in?
+   std::map<tree::tree_p,size_t> bn_to_idx; //bottom node to index map
+   tree::npv bnv;
+   bnv.clear();
+   t.getbots(bnv);
+   size_t B=bnv.size();
+   std::vector<unsigned int> nodenums(B,0);
+
+   // initialize map
+   for(size_t i=0;i<B;i++) {
+      bn_to_idx[bnv[i]]=i;
+   }
+
+   // count up ni's on this local subset of data
+   double *xx;
+   for(size_t i=0;i<di->n;i++) {
+      xx = di->x + i*di->p;
+      tbn = t.bn(xx,*xi);
+      nodenums[bn_to_idx[tbn]]++;
+   }
+
+   // Sum up the ni's across all MPI threads
+   for(size_t i=0;i<B;i++)
+      MPI_Allreduce(MPI_IN_PLACE,&nodenums[i],1,MPI_UNSIGNED,MPI_SUM,MPI_COMM_WORLD);
+
+   // set KL value based on number of observations minus 1.
+   unsigned int ni;
+   for(size_t i=0;i<di->n;i++) {
+      xx = di->x + i*di->p;
+      tbn = t.bn(xx,*xi);
+      ni = nodenums[bn_to_idx[tbn]];
+      if(ni==(unsigned int)mi.minperbot) //ni-1 falls below threshold
+         klinfl[i]=std::numeric_limits<double>::infinity();
+      else
+         klinfl[i]=0.0;
+   }
+}
+
+
+//CPO-based divergence based influence metric
+void brt::cpoinfl(std::vector<double>& cpoinfl)
+{
+   // for cpoinfl in brt class, all we need is to extract the infinities, which is done in kldivinfl already.
+   kldivinfl(cpoinfl);
+}
+
 //--------------------------------------------------
 //save/load tree to/from vector format
 //Note: for single tree models the parallelization just directs

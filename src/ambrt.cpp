@@ -1,26 +1,4 @@
 //     ambrt.cpp: Additive mean BART model class methods.
-//     Copyright (C) 2012-2016 Matthew T. Pratola, Robert E. McCulloch and Hugh A. Chipman
-//
-//     This file is part of OpenBT.
-//
-//     OpenBT is free software: you can redistribute it and/or modify
-//     it under the terms of the GNU Affero General Public License as published by
-//     the Free Software Foundation, either version 3 of the License, or
-//     (at your option) any later version.
-//
-//     OpenBT is distributed in the hope that it will be useful,
-//     but WITHOUT ANY WARRANTY; without even the implied warranty of
-//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//     GNU Affero General Public License for more details.
-//
-//     You should have received a copy of the GNU Affero General Public License
-//     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//     Author contact information
-//     Matthew T. Pratola: mpratola@gmail.com
-//     Robert E. McCulloch: robert.e.mculloch@gmail.com
-//     Hugh A. Chipman: hughchipman@gmail.com
-
 
 #include "ambrt.h" 
 #include "brtfuns.h"
@@ -189,7 +167,7 @@ void ambrt::local_loadtree(size_t iter, int beg, int end, std::vector<int>& nn, 
 void ambrt::pr()
 {
    std::cout << "***** ambrt object:\n";
-   cout << "Number of trees in product representation:" << endl;
+   cout << "Number of trees in sum representation:" << endl;
    cout << "        m:   m=" << m << endl;
    cout << "Conditioning info on each individual tree:" << endl;
    cout << "   mean:   tau=" << ci.tau << endl;
@@ -226,8 +204,9 @@ void ambrt::collapseensemble()
 //Draw is a p-dim vector to store the S_i's for all i=1,..,p variables.
 //Based on Hiroguchi, Pratola and Santner (2020).
 void ambrt::sobol(std::vector<double>& Si, std::vector<double>& Sij, 
-                  std::vector<double>& TSi, double& V, std::vector<double>& minx,
-                  std::vector<double>& maxx, size_t p)
+                  std::vector<double>& TSi, std::vector<double>& Shi, 
+                  double& V, std::vector<double>& minx,
+                  std::vector<double>& maxx, size_t p, rn& gen)
 {
   double term1,term2,term3;
   tree::npv bots;
@@ -240,8 +219,22 @@ void ambrt::sobol(std::vector<double>& Si, std::vector<double>& Sij,
   size_t B=bots.size();
 
   std::vector<double> pxnoti(B);
+  std::vector<double> pxnotP_sub(B);
+  std::vector<double> pxnotPi_sub(B);
+  std::vector<bool> subdims(p,false);
+  std::vector<bool> tempdims(p,false);
   std::vector<std::vector<double> > a(p,std::vector<double>(B));
   std::vector<std::vector<double> > b(p,std::vector<double>(B));
+  double Psize=0.0;
+
+  for(size_t i=0;i<p;i++) {
+    if(gen.uniform()<0.5) {
+      subdims[i]=true;
+      Psize+=1.0;
+    }
+  }
+  tempdims=subdims;
+
 
   for(size_t i=0;i<p;i++)
     for(size_t k=0;k<B;k++) {
@@ -260,9 +253,15 @@ void ambrt::sobol(std::vector<double>& Si, std::vector<double>& Sij,
   {
     Si[i]=0.0;
     TSi[i]=0.0;
-    for(size_t k=0;k<B;k++)
+    Shi[i]=0.0;
+    for(size_t k=0;k<B;k++) {
       pxnoti[k]=probxnoti_termk(i,k,a,b,minx,maxx);
-
+      tempdims=subdims;
+      tempdims[i]=false;
+      pxnotP_sub[k]=probxnotP_termk_sub(k,a,b,minx,maxx,tempdims);
+      tempdims[i]=true;
+      pxnotPi_sub[k]=probxnotP_termk_sub(k,a,b,minx,maxx,tempdims);
+    }
 
     // Compute normalization constant, only need to do on the first outer loop iteration
     if(i==0) {
@@ -281,11 +280,27 @@ void ambrt::sobol(std::vector<double>& Si, std::vector<double>& Sij,
     for(size_t k=0;k<B;k++)
     for(size_t l=0;l<B;l++)
     {
+      //Sobol 1-way:
       term1=bots[k]->gettheta()*pxnoti[k];
       term2=bots[l]->gettheta()*pxnoti[l];
       term3=probxi_termkl(i,k,l,a,b,minx,maxx)-probxi_termk(i,k,a,b,minx,maxx)*probxi_termk(i,l,a,b,minx,maxx);
       Si[i]+=term1*term2*term3;
 
+      //Shapley:
+      term1=bots[k]->gettheta()*pxnotPi_sub[k];
+      term2=bots[l]->gettheta()*pxnotPi_sub[l];
+      tempdims=subdims;
+      tempdims[i]=true;
+      term3=probxP_termkl_sub(k,l,a,b,minx,maxx,tempdims)-probxP_termk_sub(k,a,b,minx,maxx,tempdims)*probxP_termk_sub(l,a,b,minx,maxx,tempdims);
+      Shi[i]+=term1*term2*term3;
+
+      tempdims[i]=false;
+      term1=bots[k]->gettheta()*pxnotP_sub[k];
+      term2=bots[l]->gettheta()*pxnotP_sub[l];
+      term3=probxP_termkl_sub(k,l,a,b,minx,maxx,tempdims)-probxP_termk_sub(k,a,b,minx,maxx,tempdims)*probxP_termk_sub(l,a,b,minx,maxx,tempdims);
+      Shi[i]-=term1*term2*term3;
+
+      //Sobol Total effect:
       term1=bots[k]->gettheta()*probxi_termk(i,k,a,b,minx,maxx);
       term2=bots[l]->gettheta()*probxi_termk(i,l,a,b,minx,maxx);
       term3=probxnoti_termkl(i,k,l,a,b,minx,maxx)-pxnoti[k]*pxnoti[l];
@@ -527,5 +542,247 @@ void ambrt::ens2rects(std::vector<std::vector<double> >& asol, std::vector<std::
     // reset a0,b0,theta0
     a0.clear(); b0.clear(); theta0.clear();
   } // end of the main loop
+
+}
+
+
+
+//--------------------------------------------------
+// Get ensemble rectangle corresponding to terminal nodes associated
+// with observation y_d(x_d), the observation the be held-out in the reweighting
+// scheme.  Also calculates the corresponding weight.
+// This is used in the importance sampling reweighting scheme to handle
+// influential observations
+// Based on Pratola, George and McCulloch (2020).
+void ambrt::inflrect(double* xd, std::vector<double>& asol, std::vector<double>& bsol, 
+                  std::vector<double>& minx, std::vector<double>& maxx, size_t p)
+{
+  tree::tree_p bot;
+  std::vector<double> a0(p),b0(p),anext(p),bnext(p);
+  std::vector<double> aout(p);
+  std::vector<double> bout(p);
+
+  // Start with the first tree in the ensemble.
+  bot=mb[0].t.bn(xd,*xi);
+
+  // Convert bot from first tree into hyperrectangle in 
+  // the a0,b0 vector.
+  for(size_t i=0;i<p;i++) {
+    int L,U;
+    L=std::numeric_limits<int>::min(); U=std::numeric_limits<int>::max();
+    bot->rgi(i,&L,&U);
+
+    // Now we have the interval endpoints, put corresponding values in a,b matrices.
+    if(L!=std::numeric_limits<int>::min()) a0[i]=(*xi)[i][L];
+    else a0[i]=minx[i];
+    if(U!=std::numeric_limits<int>::max()) b0[i]=(*xi)[i][U];
+    else b0[i]=maxx[i];
+  }
+
+  // the solution so far is just a0,b0
+  asol=a0; bsol=b0;
+  a0.clear(); b0.clear();
+
+  // Now the main loop -- we will loop over trees 1..m, each time extracting the
+  // hyperrectangle of terminal node in tree j corresponding to x_d to the same 
+  // a,b vector format and then taking the pairwise
+  // intersection of the current solution in a0,b0 with the next tree to add.
+  for(size_t j=1;j<m;j++) {
+    // get terminal nodes from tree j
+    bot=mb[j].t.bn(xd,*xi);
+
+    // convert terminal node bot from tree j into a,b vector format (hyperrectangle)
+    for(size_t i=0;i<p;i++) {
+      int L,U;
+      L=std::numeric_limits<int>::min(); U=std::numeric_limits<int>::max();
+      bot->rgi(i,&L,&U);
+
+      // Now we have the interval endpoints, put corresponding values in a,b matrices.
+      if(L!=std::numeric_limits<int>::min()) anext[i]=(*xi)[i][L];
+      else anext[i]=minx[i];
+      if(U!=std::numeric_limits<int>::max()) bnext[i]=(*xi)[i][U];
+      else bnext[i]=maxx[i];
+    }
+
+    // now intersect the solution we have so far with this j'th tree and
+    // update the resulting stored solution
+    a0=asol; b0=bsol;
+    asol.clear(); bsol.clear();
+
+    // if the rectangles defined by a0[k],b0[k] and anext[l],bnext[l] intersect
+//    if(probxall_term_rect(k,l,a0,b0,anext,bnext,minx,maxx,aout,bout)>0.0) { 
+    if(probxall_term_rect(a0,b0,anext,bnext,minx,maxx,aout,bout)>0.0)
+    {
+      asol=aout;
+      bsol=bout;
+    } else
+    {
+      cout << "should never happen!" << endl;
+    }
+
+    // reset anext,bnext
+    anext.clear(); bnext.clear();
+    anext.resize(p); bnext.resize(p);
+    // reset a0,b0
+    a0.clear(); b0.clear();
+  } // end of the main loop
+
+}
+
+
+//--------------------------------------------------
+// Get ensemble rectangle corresponding to terminal nodes associated
+// with observation y_d(x_d), the observation the be held-out in the reweighting
+// scheme.  Also calculates the corresponding weight.
+// This is used in the importance sampling reweighting scheme to handle
+// influential observations
+// Based on Pratola, George and McCulloch (2020).
+// This function extracts the union rectangle.
+void ambrt::influnionrect(double* xd, std::vector<double>& asol, std::vector<double>&bsol,
+                  std::vector<double>& minx, std::vector<double>& maxx, size_t p)
+{
+  tree::tree_p bot;
+  std::vector<double> a0(p),b0(p),anext(p),bnext(p);
+  std::vector<double> aout(p);
+  std::vector<double> bout(p);
+
+  // Start with the first tree in the ensemble.
+  bot=mb[0].t.bn(xd,*xi);
+
+  // Convert bot from first tree into hyperrectangle in 
+  // the a0,b0 vector.
+  for(size_t i=0;i<p;i++) {
+    int L,U;
+    L=std::numeric_limits<int>::min(); U=std::numeric_limits<int>::max();
+    bot->rgi(i,&L,&U);
+
+    // Now we have the interval endpoints, put corresponding values in a,b matrices.
+    if(L!=std::numeric_limits<int>::min()) a0[i]=(*xi)[i][L];
+    else a0[i]=minx[i];
+    if(U!=std::numeric_limits<int>::max()) b0[i]=(*xi)[i][U];
+    else b0[i]=maxx[i];
+  }
+
+  // the solution so far is just a0,b0
+  asol=a0; bsol=b0;
+  a0.clear(); b0.clear();
+
+  // Now the main loop -- we will loop over trees 1..m, each time extracting the
+  // hyperrectangle of terminal node in tree j corresponding to x_d to the same 
+  // a,b vector format and then taking the pairwise
+  // union of the current solution in a0,b0 with the next tree to add.
+  for(size_t j=1;j<m;j++) {
+    // get terminal nodes from tree j
+    bot=mb[j].t.bn(xd,*xi);
+
+    // convert terminal node bot from tree j into a,b vector format (hyperrectangle)
+    for(size_t i=0;i<p;i++) {
+      int L,U;
+      L=std::numeric_limits<int>::min(); U=std::numeric_limits<int>::max();
+      bot->rgi(i,&L,&U);
+
+      // Now we have the interval endpoints, put corresponding values in a,b matrices.
+      if(L!=std::numeric_limits<int>::min()) anext[i]=(*xi)[i][L];
+      else anext[i]=minx[i];
+      if(U!=std::numeric_limits<int>::max()) bnext[i]=(*xi)[i][U];
+      else bnext[i]=maxx[i];
+    }
+
+    // now intersect the solution we have so far with this j'th tree and
+    // update the resulting stored solution
+    a0=asol; b0=bsol;
+    asol.clear(); bsol.clear();
+
+    // Take union of the rectangles defined by a0[k],b0[k] and anext[l],bnext[l].
+    // Note that both of these rectangles must include xd by definition, and therefore
+    // are not disjoint so the union is straightforward to calculate.
+    unionxall_term_rect(a0,b0,anext,bnext,minx,maxx,aout,bout);
+    asol=aout;
+    bsol=bout;
+
+    // reset anext,bnext
+    anext.clear(); bnext.clear();
+    anext.resize(p); bnext.resize(p);
+    // reset a0,b0
+    a0.clear(); b0.clear();
+  } // end of the main loop
+
+}
+
+
+
+//--------------------------------------------------
+// Influence metrics.  See Pratola, George and McCulloch (2021)
+
+// Cook's distance
+void ambrt::cookdinfl(std::vector<double>& cdinflmean, std::vector<double>& cdinflmax, double* sigma)
+{
+  std::fill(cdinflmean.begin(),cdinflmean.end(),0.0);
+  std::fill(cdinflmax.begin(),cdinflmax.end(),0.0);
+
+  std::vector<double> temp(di->n);
+  for(size_t j=0;j<m;j++) {
+    *divec[j] = *di;
+    *divec[j] -= *getf();
+    *divec[j] += *mb[j].getf();
+    mb[j].cookdinfl(temp,sigma);
+    for(size_t i=0;i<di->n;i++) { 
+      cdinflmean[i] += temp[i]/((double) m);
+      if(temp[i]>cdinflmax[i]) cdinflmax[i]=temp[i];
+    }
+  }
+}
+
+//KL-divergence based influence metric
+void ambrt::kldivinfl(std::vector<double>& klinfl, double* sigma)
+{
+  std::fill(klinfl.begin(),klinfl.end(),0.0);
+
+  std::vector<double> temp(di->n);
+  for(size_t j=0;j<m;j++) {
+    *divec[j] = *di;
+    *divec[j] -= *getf();
+    *divec[j] += *mb[j].getf();
+    mb[j].kldivinfl(temp,sigma); // I just need to extract the infinities from individual trees.
+
+    for(size_t i=0;i<di->n;i++) {
+      if(temp[i]==std::numeric_limits<double>::infinity()) {
+        klinfl[i]=temp[i];
+        break;
+      }
+      else {
+        double stdres = resid[i]/sigma[i];
+        double stdres2 = stdres*stdres;
+        klinfl[i] = -0.5*std::log(2*3.14159)-std::log(sigma[i])-0.5*stdres2;
+      }
+    }
+  }  
+
+}
+
+//CPO^-1 based influence metric
+void ambrt::cpoinfl(std::vector<double>& cpoinfl, double* sigma)
+{
+  std::fill(cpoinfl.begin(),cpoinfl.end(),0.0);
+
+  std::vector<double> temp(di->n);
+  for(size_t j=0;j<m;j++) {
+    *divec[j] = *di;
+    *divec[j] -= *getf();
+    *divec[j] += *mb[j].getf();
+    mb[j].cpoinfl(temp,sigma); // I just need to extract the infinities from individual trees.
+
+    for(size_t i=0;i<di->n;i++) {
+      if(temp[i]==std::numeric_limits<double>::infinity()) {
+        cpoinfl[i]=temp[i];
+        break;
+      }
+      else {
+        double stdres = resid[i]/sigma[i];
+        double stdres2 = stdres*stdres;
+        cpoinfl[i]=std::sqrt(2*3.14159)*sigma[i]*std::exp(stdres2/2.0);
+      }
+    }
+  }  
 
 }

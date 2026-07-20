@@ -1,26 +1,4 @@
 //     brtfuns.cpp: Base BT model class helper functios.
-//     Copyright (C) 2012-2016 Matthew T. Pratola, Robert E. McCulloch and Hugh A. Chipman
-//
-//     This file is part of OpenBT.
-//
-//     OpenBT is free software: you can redistribute it and/or modify
-//     it under the terms of the GNU Affero General Public License as published by
-//     the Free Software Foundation, either version 3 of the License, or
-//     (at your option) any later version.
-//
-//     OpenBT is distributed in the hope that it will be useful,
-//     but WITHOUT ANY WARRANTY; without even the implied warranty of
-//     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//     GNU Affero General Public License for more details.
-//
-//     You should have received a copy of the GNU Affero General Public License
-//     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-//
-//     Author contact information
-//     Matthew T. Pratola: mpratola@gmail.com
-//     Robert E. McCulloch: robert.e.mculloch@gmail.com
-//     Hugh A. Chipman: hughchipman@gmail.com
-
 
 #include "brtfuns.h"
 
@@ -552,6 +530,57 @@ void collapsetree(tree& st, tree::tree_p t, tree::tree_p tprime)
 
 
 //--------------------------------------------------
+//collapse tree for vector parameter theta
+void collapsetree_vec(tree& st, tree::tree_p t, tree::tree_p tprime)
+{
+      tree::npv tlefts, trights, tbots;
+      tree::tree_cp tempt;
+
+      vxd thetavec=t->getthetavec();
+
+      //simple case, tprime is terminal, t is (always) terminal
+      if(!tprime->l) {
+         t->setthetavec(tprime->getthetavec()+thetavec);
+      }
+      else if(!t->p)  //simple case 2: t is a terminal root node
+      {
+         st.tonull();
+         st=(*tprime); //copy
+         st.getbots(tbots);// all terminal nodes below t.
+         for(size_t j=0;j<tbots.size();j++)
+            tbots[j]->setthetavec(tbots[j]->getthetavec()+thetavec);
+      }
+      else { //general case, t is (always) terminal, tprime is not.
+         tempt=tprime;
+         tree::tree_p tpar=t->p;
+         if(t->isleft()) {
+            t->p=0;
+            delete t;
+            tpar->l=new tree(*tempt);
+            tpar->l->p=tpar;
+            tpar->l->getpathtorootlr(tlefts,trights);
+            //collapse redundancies in tprime
+            splitall(tpar->l,tlefts,trights);
+            tpar->l->getbots(tbots);// all terminal nodes below t.
+         }
+         else { //isright
+            t->p=0;
+            delete t;
+            tpar->r=new tree(*tempt);
+            tpar->r->p=tpar;
+            tpar->r->getpathtorootlr(tlefts,trights);
+            //collapse redundancies in tprime
+            splitall(tpar->r,tlefts,trights);
+            tpar->r->getbots(tbots);// all terminal nodes below t.
+         }
+
+         for(size_t j=0;j<tbots.size();j++)
+            tbots[j]->setthetavec(tbots[j]->getthetavec()+thetavec);
+      }
+}
+
+
+//--------------------------------------------------
 //split tree along a sequence of variable, cutpoint pairs
 //retains only the part of the tree that remains.
 //Note this generates both the left and right subtree branches
@@ -968,7 +997,7 @@ bool mergecount(tree::tree_p tl, tree::tree_p tr, size_t v, size_t c, int* nways
 
 //--------------------------------------------------
 // Functions to support calculation of Sobol indices for BART
-// Based on Hiroguchi, Pratola and Santner (2020).
+// Based on Horiguchi, Pratola and Santner (2020).
 //--------------------------------------------------
 double probxnoti_termk(size_t i, size_t k, std::vector<std::vector<double> >& a, 
    std::vector<std::vector<double> >& b, std::vector<double>& minx, std::vector<double>& maxx)
@@ -1066,8 +1095,94 @@ double probxall_termkl(size_t k, size_t l, std::vector<std::vector<double> >& a,
 }
 
 //--------------------------------------------------
+// Additional functions to support calculation of Shapley indices for BART
+// Based on Horiguchi and Pratola (2022).
+//--------------------------------------------------
+double probxnotP_termk_sub(size_t k, std::vector<std::vector<double> >& a, 
+   std::vector<std::vector<double> >& b, std::vector<double>& minx, std::vector<double>& maxx,
+   std::vector<bool> &dims)
+{
+/*  double prob=1.0;
+  size_t p=minx.size();
+
+  for(size_t j=0;j<p;j++)
+    if(!dims[j]) {
+      prob *= (std::max(b[j][k]-a[j][k],0.0))/(maxx[j]-minx[j]);
+    }
+*/
+   double logprob=0.0;
+   size_t p=minx.size();
+
+   for(size_t j=0;j<p;j++)
+      if(!dims[j]) {
+         if(b[j][k]-a[j][k]<=0.0) return 0.0;
+         logprob += std::log(b[j][k]-a[j][k])-std::log(maxx[j]-minx[j]);
+      }
+
+   return std::exp(logprob);
+//  return prob;
+}
+double probxP_termk_sub(size_t k, std::vector<std::vector<double> >& a, 
+   std::vector<std::vector<double> >& b, std::vector<double>& minx, std::vector<double>& maxx,
+   std::vector<bool> &dims)
+{
+/*  double prob=1.0;
+  size_t p=minx.size();
+
+  for(size_t j=0;j<p;j++)
+    if(dims[j]) {
+      prob *= (std::max(b[j][k]-a[j][k],0.0))/(maxx[j]-minx[j]);
+    }
+*/
+   double logprob=0.0;
+   size_t p=minx.size();
+
+   for(size_t j=0;j<p;j++)
+      if(dims[j]) {
+         if(b[j][k]-a[j][k]<=0.0) return 0.0;
+         logprob += std::log(b[j][k]-a[j][k])-std::log(maxx[j]-minx[j]);
+      }
+
+   return std::exp(logprob);
+//  return prob;
+}
+double probxP_termkl_sub(size_t k, size_t l, std::vector<std::vector<double> >& a, 
+   std::vector<std::vector<double> >& b, std::vector<double>& minx, std::vector<double>& maxx,
+   std::vector<bool> &dims)
+{
+   double aa,bb;
+/*   double prob=1.0;
+   size_t p=minx.size();
+
+   for(size_t j=0;j<p;j++)
+      if(dims[j])
+      {
+         aa=std::max(a[j][k],a[j][l]);
+         bb=std::min(b[j][k],b[j][l]);
+
+         prob *= (std::max(bb-aa,0.0))/(maxx[j]-minx[j]);
+         //std::max needed because maybe they don't intersect
+      }
+*/
+   double logprob=0.0;
+   size_t p=minx.size();
+
+   for(size_t j=0;j<p;j++)
+      if(dims[j]) {
+         aa=std::max(a[j][k],a[j][l]);
+         bb=std::min(b[j][k],b[j][l]);
+         if(bb <= aa) return 0.0;
+         logprob += std::log(bb-aa)-std::log(maxx[j]-minx[j]);
+      }
+
+   return std::exp(logprob);
+//  return prob;
+}
+
+
+//--------------------------------------------------
 // This function only used for determining Pareto front/set.
-// Based on Hiroguchi, Santner, Sun and Pratola (2020).
+// Based on Horiguchi, Santner, Sun and Pratola (2020).
 // Note here the a0,b0,a1,b1 are of dimension rows=#nodes and columns=# variables (p)
 // which is the opposite of all the Sobol functions above.
 // Function returns measure of the intersection and the intersection rectangle in aout,bout.
@@ -1091,6 +1206,56 @@ double probxall_termkl_rect(size_t k, size_t l, std::vector<std::vector<double> 
   return prob;
 }
 
+//--------------------------------------------------
+// Similar to probxall_termkl_rect() function except
+// single hyperrectangles are passed in rather than a vector of them
+// so no need for k,l indices.
+// Currently only used in the ambrt::inflrect() method for reweighting
+// predictions for influential observations.
+// See Pratola, George and McCulloch (2020).
+//--------------------------------------------------
+double probxall_term_rect(std::vector<double>& a0, 
+   std::vector<double>& b0, std::vector<double>& a1, 
+   std::vector<double>& b1, std::vector<double>& minx, std::vector<double>& maxx, std::vector<double>& aout, std::vector<double>& bout)
+{
+   double prob=1.0;
+   size_t p=minx.size();
+
+   for(size_t j=0;j<p;j++)
+   {
+      aout[j]=std::max(a0[j],a1[j]);
+      bout[j]=std::min(b0[j],b1[j]);
+
+      prob *= (std::max(bout[j]-aout[j],0.0))/(maxx[j]-minx[j]);
+      //std::max needed because maybe they don't intersect
+   }
+
+  return prob;
+}
+//--------------------------------------------------
+// Similar to probxall_term_rect() function except
+// we extract the union rectangle rather than the intersection.
+// Currently only used in the ambrt::influnionrect() method for reweghting
+// predictions for influential observations.
+// See Pratola, George and McCulloch (2020).
+// Note: this function assumes a0,b0 and a1,b1 are not disjoint.
+//--------------------------------------------------
+void unionxall_term_rect(std::vector<double>& a0, 
+   std::vector<double>& b0, std::vector<double>& a1, 
+   std::vector<double>& b1, std::vector<double>& minx, std::vector<double>& maxx, std::vector<double>& aout, std::vector<double>& bout)
+{
+   size_t p=minx.size();
+
+   for(size_t j=0;j<p;j++)
+   {
+      aout[j]=std::min(a0[j],a1[j]);
+      bout[j]=std::max(b0[j],b1[j]);
+   }
+
+  return;
+}
+
+
 // theta needs to be sorted in increasing order of its first coordinate, and in
 // case of ties, increasing in its second coordinate.
 std::vector<size_t> find_pareto_front(size_t start, size_t end, std::list<std::vector<double> > theta)
@@ -1105,9 +1270,9 @@ std::vector<size_t> find_pareto_front(size_t start, size_t end, std::list<std::v
       R=find_pareto_front(start,(size_t)((end-start)/2+start),theta);
       S=find_pareto_front((size_t)((end-start)/2+start)+1,end,theta);
 
-      for(size_t i=0;i<S.size();i++) 
-         if(not_dominated(S[i],R,theta))
-            T.push_back(S[i]);
+      for(size_t s: S) 
+         if(not_dominated(s,R,theta))
+            T.push_back(s);
 
       R.insert(R.end(),T.begin(),T.end());  // R union T
    }
@@ -1122,69 +1287,109 @@ std::vector<size_t> find_pareto_front(size_t start, size_t end, std::list<std::v
 // the vector theta[index].  If none of the vectors in R dominate theta[index],
 // then theta[index] is not dominated so return true.  Otherwise at least one vector
 // in R dominate theta[index], so return false.
-// Currently we only support d=2 dimensional theta's.
+// Supports theta of any (finite) dimension.
 bool not_dominated(size_t index, std::vector<size_t> R, std::list<std::vector<double> > theta)
 {
+   size_t d = theta.front().size() - 1;  // this assumes theta still has the index record as the last element of each vector.
    // note the -1's because we keep track of 1..sizeof(V) but the vectors are indexed by 0..sizeof(V)-1.
-   for(size_t i=0;i<R.size();i++) {
-      std::list<std::vector<double> >::iterator itR = std::next(theta.begin(),R[i]-1);
-      std::list<std::vector<double> >::iterator it = std::next(theta.begin(),index-1);
+   std::list<std::vector<double> >::iterator it = std::next(theta.begin(),index-1);
+   // for(size_t i=0;i<R.size();i++)
+   for (size_t i: R) {
+      std::list<std::vector<double> >::iterator itR = std::next(theta.begin(),i-1);
       // if R_ij <= v_j for all j then R_i dominates v, return false
 //      if(theta[R[i]-1][0]<=theta[index-1][0] && theta[R[i]-1][1]<=theta[index-1][1])
-      if((*itR).at(0) <= (*it).at(0) && (*itR).at(1) <= (*it).at(1))
-         return false;
+      bool is_dominated = true;
+      for (size_t j=0;j<d;j++) is_dominated && ((*itR).at(j) <= (*it).at(j));
+      if(is_dominated) return false;
+      // if((*itR).at(0) <= (*it).at(0) && (*itR).at(1) <= (*it).at(1))
+      //    return false;
    }
    return true;
 }
 
-//--------------------------------------------------
-//Analogue of collapsetree function for vector valued parameters
-void collapsetree_vec(tree& st, tree::tree_p t, tree::tree_p tprime)
+
+// combines a dd-dim output ensemble with a 1-dim output ensemble to make a (dd+1)-dim output ensemble
+// assume a2/b2/theta2 is a 1-dim output ens
+// but a1/b1/ltheta1 is a dd-dim output ens (where dd>=1)
+// function's output is asol/bsol/thetasol
+void combine_ensembles(size_t p, xinfo& xi, std::vector<std::unordered_map<double, size_t> >& ximaps, std::vector<double>& minx, std::vector<double>& maxx, 
+   std::vector<std::vector<double> >& a1,   std::vector<std::vector<double> >& b1, std::list<std::vector<double> >& ltheta1, 
+   std::vector<std::vector<double> >& a2,   std::vector<std::vector<double> >& b2, std::vector<double>& theta2, double fmean2, 
+   std::vector<std::vector<double> >& asol, std::vector<std::vector<double> >& bsol, std::list<std::vector<double> >& thetasol, 
+   bool to_clear_old_ens)
 {
-      tree::npv tlefts, trights, tbots;
-      tree::tree_cp tempt;
 
-      vxd thetavec=t->getthetavec();
+   std::vector<double> aout(p),bout(p);
 
-      //simple case, tprime is terminal, t is (always) terminal
-      if(!tprime->l) {
-         t->setthetavec(tprime->getthetavec()+thetavec);
+   // 1. Assign rectangle indices in ens2 to the 3-d jagged tensor ie2
+   // Time: O(theta2.size() * p * numcut)
+   std::vector<std::vector<std::vector<size_t> > > ie2(p);  // (p,ncutsi+1,varying) jagged tensor -- to contain indices of ens2
+   for (size_t w=0;w<p;w++) ie2[w].resize(xi[w].size());
+   for (size_t j=0;j<theta2.size();j++) {
+      for (size_t w=0;w<p;w++) {
+         size_t lc = ximaps[w][a2[j][w]]; 
+         size_t rc = ximaps[w][b2[j][w]]; 
+         for (size_t c=lc;c<=rc;c++)  ie2[w][c].push_back(j);  
       }
-      else if(!t->p)  //simple case 2: t is a terminal root node
-      {
-         st.tonull();
-         st=(*tprime); //copy
-         st.getbots(tbots);// all terminal nodes below t.
-         for(size_t j=0;j<tbots.size();j++)
-            tbots[j]->setthetavec(tbots[j]->getthetavec()+thetavec);
-      }
-      else { //general case, t is (always) terminal, tprime is not.
-         tempt=tprime;
-         tree::tree_p tpar=t->p;
-         if(t->isleft()) {
-            t->p=0;
-            delete t;
-            tpar->l=new tree(*tempt);
-            tpar->l->p=tpar;
-            tpar->l->getpathtorootlr(tlefts,trights);
-            //collapse redundancies in tprime
-            splitall(tpar->l,tlefts,trights);
-            tpar->l->getbots(tbots);// all terminal nodes below t.
+   }
+
+   // 2. Get rectangle intersections between ens1 and ens2
+   // Time: O(theta1.size() * p * numcut), which is faster than O(theta1.size() * theta2.size())
+   std::list<std::vector<double> >::iterator it1 = ltheta1.begin();
+   for (size_t j=0;j<a1.size();j++) {
+      // find all rectangles k in ambm2 that intersect with rectangle j from ambm1
+      std::vector<size_t> valids;  // to contain all rectangles k in ambm2 that intersect with rectangle j from ambm1
+      size_t v_size = 0;
+      for (size_t w=0;w<p;w++) {  
+         size_t lc = ximaps[w][a1[j][w]];  // ximaps[w][asol[j][w]]; 
+         size_t rc = ximaps[w][b1[j][w]];  // ximaps[w][bsol[j][w]]; 
+         size_t nvalidw = 0;  
+         for (size_t c=lc;c<=rc;c++) nvalidw += ie2[w][c].size();
+         std::vector<size_t> validsw(nvalidw);
+         std::vector<size_t>::iterator it;
+         nvalidw = 0;
+         for (size_t c=lc;c<=rc;c++) {
+            it=std::set_union(validsw.begin(), validsw.begin()+nvalidw, ie2[w][c].begin(), ie2[w][c].end(), validsw.begin());
+            nvalidw = it-validsw.begin();  
          }
-         else { //isright
-            t->p=0;
-            delete t;
-            tpar->r=new tree(*tempt);
-            tpar->r->p=tpar;
-            tpar->r->getpathtorootlr(tlefts,trights);
-            //collapse redundancies in tprime
-            splitall(tpar->r,tlefts,trights);
-            tpar->r->getbots(tbots);// all terminal nodes below t.
+         if (w==0) { 
+            valids.reserve(nvalidw);
+            valids.assign(validsw.begin(), validsw.begin()+nvalidw);
+            v_size = nvalidw;
          }
-
-         for(size_t j=0;j<tbots.size();j++)
-            tbots[j]->setthetavec(tbots[j]->getthetavec()+thetavec);
+         else {  // intersect valids and validsw; store in valids
+            it=std::set_intersection(valids.begin(), valids.begin()+v_size, validsw.begin(), validsw.begin()+nvalidw, valids.begin());
+            v_size = it-valids.begin();
+         }
       }
+
+      for (size_t kind=0;kind<v_size;kind++) {  // v_size should be much smaller than theta2.size(), by a factor of 10^p or so
+         size_t k = valids[kind];  // allows me to avoid resizing valids
+         // if the rectangles defined by a1[j],b1[j] and a2[k],b2[k] intersect
+         if(probxall_termkl_rect(j,k,a1,b1,a2,b2,minx,maxx,aout,bout)>0.0) {  // which should almost always be true, I believe
+            asol.push_back(aout);
+            bsol.push_back(bout);
+            //The asol.size() is to record the index in the unsorted list so we can back
+            //out the correct VHR for the theta's on the PF later on(line 497-498).
+            //It would be cleaner if we had a list of vector, size_t tuple but this works as well.
+            std::vector<double> th = *it1;  // ltheta1[j];
+            if (th.size() > 1) th.pop_back();  // this is to remove the index record keeping in ltheta1
+            th.push_back(theta2[k]+fmean2);
+            th.push_back((double)(asol.size()));
+            thetasol.push_back(th);
+         }
+      }
+      it1++;
+    }
+
+   if (to_clear_old_ens) {  // clear the hyperrectangles for this realization
+      a1.clear();
+      b1.clear();
+      ltheta1.clear();
+      a2.clear();
+      b2.clear();
+      theta2.clear();
+   }
 }
 
 //--------------------------------------------------

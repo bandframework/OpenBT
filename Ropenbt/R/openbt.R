@@ -1,27 +1,8 @@
 ##     openbt.R: R script wrapper functions for OpenBT.
-##     Copyright (C) 2012-2019 Matthew T. Pratola
-##
-##     This file is part of OpenBT.
-##
-##     OpenBT is free software: you can redistribute it and/or modify
-##     it under the terms of the GNU Affero General Public License as published by
-##     the Free Software Foundation, either version 3 of the License, or
-##     (at your option) any later version.
-##
-##     OpenBT is distributed in the hope that it will be useful,
-##     but WITHOUT ANY WARRANTY; without even the implied warranty of
-##     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-##     GNU Affero General Public License for more details.
-##
-##     You should have received a copy of the GNU Affero General Public License
-##     along with this program.  If not, see <http://www.gnu.org/licenses/>.
-##
-##     Author contact information
-##     Matthew T. Pratola: mpratola@gmail.com
 
 
 # Load/Install required packages
-required <- c("zip","data.table")
+required <- c("zip","data.table","Hmisc")
 tbi <- required[!(required %in% installed.packages()[,"Package"])]
 if(length(tbi)) {
    cat("***Installing OpenBT package dependencies***\n")
@@ -29,6 +10,9 @@ if(length(tbi)) {
 }
 library(zip,quietly=TRUE,warn.conflicts=FALSE)
 library(data.table,quietly=TRUE,warn.conflicts=FALSE)
+library(Hmisc,quietly=TRUE,warn.conflicts=FALSE) #for weighted mean/var/quantile used in repredict.*()
+# library(foreach,quietly=TRUE,warn.conflicts=FALSE) #only used in repredict.openbt() method to speedup R-based reweighting calculations
+# library(doMC,quietly=TRUE,warn.conflicts=FALSE) #only used in repredict.openbt() method to speedup R-based reweighting calculations
 
 
 openbt = function(
@@ -202,7 +186,8 @@ if(modeltype==MODEL_MIXBART)
 if(!is.null(xicuts)) # use xicuts
 {
    xi=xicuts
-}else # default to equal numcut per dimension
+}
+else # default to equal numcut per dimension
 {
    xi=vector("list",p)
    minx=floor(apply(x,1,min))
@@ -357,7 +342,6 @@ writeLines(c(paste(modeltype),xroot,yroot,fmean.out,paste(m),paste(mh),paste(nd)
             paste(probchv),paste(probchvh),paste(minnumbot),paste(minnumboth),
             paste(printevery),paste(xiroot),paste(modelname),paste(summarystats)),fout)
 close(fout)
-
 # folder=paste(".",modelname,"/",sep="")
 # system(paste("rm -rf ",folder,sep=""))
 # system(paste("mkdir ",folder,sep=""))
@@ -415,6 +399,9 @@ cmd="openbtcli --conf"
 if(Sys.which("openbtcli")[[1]]=="") # not installed in a global location, so assume current directory
    runlocal=TRUE
 
+if(runlocal && Sys.which("./openbtcli")[[1]]=="") # not installed globally, not installed locally.
+   stop("OpenBT library installation is missing.  \n")
+
 if(runlocal) cmd="./openbtcli --conf"
 
 cmdopt=system(cmd)
@@ -431,13 +418,20 @@ if(cmdopt==100)  # serial/OpenMP
    else
       cmd=paste("openbtcli ",folder,sep="")
 }
-
+#
 #cat(cmd)
 system(cmd)
 #system(paste("rm -f ",folder,"/config",sep=""))
 #system(paste("mv ",folder,"fit ",folder,modelname,".fit",sep=""))
 
 res=list()
+
+# Read in the influence metrics.
+res$influence=NULL
+for(i in 1:nslv)
+   res$influence=rbind(res$influence,as.matrix(read.table(paste(folder,"/",modelname,".influence",i,sep=""))))
+
+colnames(res$influence)=c("MeanCookD", "MaxCookD", "KLDiv", "CPOinv")
 res$modeltype=modeltype
 res$model=model
 res$xroot=xroot; res$yroot=yroot;res$m=m; res$mh=mh; res$nd=nd; res$burn=burn
@@ -465,8 +459,9 @@ return(res)
 #Get Predictions
 #--------------------------------------------------
 
+
 predict.openbt = function(
-fit=NULL,
+object=NULL,
 x.test=NULL,
 f.test=matrix(1,nrow = 1, ncol = 2),
 # f.discrep.mean = NULL, # delete
@@ -474,9 +469,11 @@ f.test=matrix(1,nrow = 1, ncol = 2),
 tc=2,
 fmean=fit$fmean,
 q.lower=0.025,
-q.upper=0.975
+q.upper=0.975, ...
 )
 {
+
+fit=object
 
 # model type definitions
 MODEL_BT=1
@@ -601,9 +598,12 @@ res=list()
 # Faster using data.table's fread than the built-in read.table.
 # However, it does strangely introduce some small rounding error on the order of 8.9e-16.
 fnames=list.files(fit$folder,pattern=paste(fit$modelname,".mdraws*",sep=""),full.names=TRUE)
-res$mdraws=do.call(cbind,sapply(fnames,data.table::fread))
+res$mdraws=as.matrix(do.call(cbind,sapply(fnames,data.table::fread)))
 fnames=list.files(fit$folder,pattern=paste(fit$modelname,".sdraws*",sep=""),full.names=TRUE)
-res$sdraws=do.call(cbind,sapply(fnames,data.table::fread))
+res$sdraws=as.matrix(do.call(cbind,sapply(fnames,data.table::fread)))
+
+system(paste("rm -f ",fit$folder,"/",fit$modelname,".mdraws*",sep=""))
+system(paste("rm -f ",fit$folder,"/",fit$modelname,".sdraws*",sep=""))
 
 #Get Results for models that are not model mixing
 if(fit$modeltype!=MODEL_MIXBART){
@@ -622,7 +622,7 @@ if(fit$modeltype!=MODEL_MIXBART){
   res$psd=NULL
   res$p.5=NULL
   res$p.lower=NULL
-  res$p.upper=NULL  
+  res$p.upper=NULL
 }
 
 #Get probabilities for the probit models
@@ -633,6 +633,8 @@ if(fit$modeltype==MODEL_PROBIT || fit$modeltype==MODEL_MODIFIEDPROBIT)
    {
       res$pdraws=cbind(res$pdraws,read.table(paste(fit$folder,"/",fit$modelname,".pdraws",i-1,sep="")))
    }
+
+   system(paste("rm -f ",fit$folder,"/",fit$modelname,".pdraws*",sep=""))
 
    res$pdraws=as.matrix(res$pdraws)
    res$pmean=apply(res$pdraws,2,mean)
@@ -664,6 +666,7 @@ if(fit$modeltype==MODEL_MIXBART){
 
 res$q.lower=q.lower
 res$q.upper=q.upper
+res$x.test=x.test
 res$modeltype=fit$modeltype
 
 class(res)="OpenBT_predict"
@@ -822,6 +825,10 @@ for(i in 2:tc)
     draws=rbind(draws,read.table(paste(fit$folder,"/",fit$modelname,".sobol",i-1,sep="")))
 draws=as.matrix(draws)
 
+drawsh=read.table(paste(fit$folder,"/",fit$modelname,".shapley",0,sep=""))
+for(i in 2:tc)
+    drawsh=rbind(drawsh,read.table(paste(fit$folder,"/",fit$modelname,".shapley",i-1,sep="")))
+drawsh=as.matrix(drawsh)
 
 labs=gsub("\\s+",",",apply(combn(1:p,2),2,function(zz) Reduce(paste,zz)))
 res$vidraws=draws[,1:p]
@@ -846,6 +853,10 @@ colnames(res$sijdraws)=paste("S",labs,sep="")
 res$tsidraws=as.matrix(res$tsidraws)
 colnames(res$tsidraws)=paste("TS",1:p,sep="")
 rm(draws)
+res$shdraws=as.matrix(drawsh)
+res$shdraws=res$shdraws/as.vector(res$vdraws)
+colnames(res$shdraws)=paste("Sh",1:p,sep="")
+rm(drawsh)
 
 # summaries
 res$msi=apply(res$sidraws,2,mean)
@@ -881,6 +892,17 @@ names(res$tsi.5)=paste("TS",1:p,sep="")
 names(res$tsi.lower)=paste("TS",1:p,sep="")
 names(res$tsi.upper)=paste("TS",1:p,sep="")
 
+res$mshi=apply(res$shdraws,2,mean)
+res$mshi.sd=apply(res$shdraws,2,sd)
+# res$shi.5=apply(res$shdraws,2,quantile,0.5)
+# res$shi.lower=apply(res$shdraws,2,quantile,q.lower)
+# res$shi.upper=apply(res$shdraws,2,quantile,q.upper)
+names(res$mshi)=paste("Sh",1:p,sep="")
+names(res$mshi.sd)=paste("Sh",1:p,sep="")
+# names(res$shi.5)=paste("Sh",1:p,sep="")
+# names(res$shi.lower)=paste("Sh",1:p,sep="")
+# names(res$shi.upper)=paste("Sh",1:p,sep="")
+
 
 res$q.lower=q.lower
 res$q.upper=q.upper
@@ -898,6 +920,7 @@ return(res)
 mopareto.openbt = function(
 fit1=NULL,
 fit2=NULL,
+fit3=NULL,
 q.lower=0.025,
 q.upper=0.975,
 tc=2
@@ -910,10 +933,26 @@ if(is.null(fit1) || is.null(fit2)) stop("No fitted models specified!\n")
 #if(fit1$xicuts != fit2$xicuts) stop("Models not compatible\n")
 if(fit1$nd != fit2$nd) stop("Models have different number of posterior samples\n")
 p=length(fit1$xicuts)
+d=2+(!is.null(fit3))
+print(paste0("d=",d))
 m1=fit1$m
 m2=fit2$m
 mh1=fit1$mh
 mh2=fit2$mh
+m3=0
+mh3=0
+if(!is.null(fit3)) {
+   if(fit3$nd != fit2$nd) stop("Models have different number of posterior samples\n")
+   m3=fit3$m
+   mh3=fit3$mh
+}
+# if(is.null(fit3)) {
+#    fit3=list()
+#    fit3$modelname="null"
+#    fit3$folder="null"
+#    fit3$fmean=0.0
+# }
+
 nd=fit1$nd
 modelname=fit1$modelname
 
@@ -921,11 +960,26 @@ modelname=fit1$modelname
 #--------------------------------------------------
 #write out config file
 fout=file(paste(fit1$folder,"/config.mopareto",sep=""),"w")
-writeLines(c(fit1$modelname,fit2$modelname,fit1$xiroot,
-            fit2$folder,
+if(!is.null(fit3)) {
+writeLines(c(fit1$modelname,fit2$modelname,fit3$modelname,fit1$xiroot,
+            fit2$folder,fit3$folder,
             paste(nd),paste(m1),
-            paste(mh1),paste(m2),paste(mh2),paste(p),paste(fit1$minx),
-            paste(fit1$maxx),paste(fit1$fmean),paste(fit2$fmean),paste(tc)) ,fout)
+            paste(mh1),paste(m2),paste(mh2),
+            paste(m3),paste(mh3),
+            paste(p),paste(fit1$minx),
+            paste(fit1$maxx),paste(fit1$fmean),paste(fit2$fmean),
+            paste(fit3$fmean),paste(tc)) ,fout)
+}
+if(is.null(fit3)) {
+writeLines(c(fit1$modelname,fit2$modelname,paste("null"),fit1$xiroot,
+            fit2$folder,paste("null"),
+            paste(nd),paste(m1),
+            paste(mh1),paste(m2),paste(mh2),
+            paste(m3),paste(mh3),
+            paste(p),paste(fit1$minx),
+            paste(fit1$maxx),paste(fit1$fmean),paste(fit2$fmean),
+            paste(0.0),paste(tc)) ,fout)  
+}
 close(fout)
 
 
@@ -962,6 +1016,7 @@ system(paste("rm -f ",fit1$folder,"/config.mopareto",sep=""))
 #read in result
 res=list()
 ii=1
+u=0  # to modify temp indexing if fit3 exists
 for(i in 1:tc) 
 {
    con=file(paste(fit1$folder,"/",fit1$modelname,".mopareto",i-1,sep=""))
@@ -970,13 +1025,17 @@ for(i in 1:tc)
    while(length(s)>0) {
       temp=as.numeric(unlist(strsplit(s," ")))
       k=as.integer(temp[1])
-      theta=matrix(0,ncol=k,nrow=2)
+      theta=matrix(0,ncol=k,nrow=d)
       theta[1,]=temp[2:(2+k-1)]
       theta[2,]=temp[(2+k):(2+2*k-1)]
+      if(!is.null(fit3)) { 
+         theta[3,]=temp[(2+2*k):(2+3*k-1)] 
+         u=k
+      }
       a=matrix(0,nrow=p,ncol=k)
-      for(i in 1:p) a[i,]=temp[(2+(2+i-1)*k):(2+(2+i)*k-1)]
+      for(i in 1:p) a[i,]=temp[(2+(2+i-1)*k):(2+(2+i)*k-1)+u]
       b=matrix(0,nrow=p,ncol=k)
-      for(i in 1:p) b[i,]=temp[(2+(2+p+i-1)*k):(2+(2+p+i)*k-1)]
+      for(i in 1:p) b[i,]=temp[(2+(2+p+i-1)*k):(2+(2+p+i)*k-1)+u]
       entry=list()
       entry[["theta"]]=theta
       entry[["a"]]=a
@@ -988,75 +1047,6 @@ for(i in 1:tc)
    close(con)
 }
 
-# res=list()
-# draws=read.table(paste(fit$folder,"/",fit$modelname,".sobol",0,sep=""))
-# for(i in 2:tc)
-#     draws=rbind(draws,read.table(paste(fit$folder,"/",fit$modelname,".sobol",i-1,sep="")))
-# draws=as.matrix(draws)
-
-
-# labs=gsub("\\s+",",",apply(combn(1:p,2),2,function(zz) Reduce(paste,zz)))
-# res$vidraws=draws[,1:p]
-# res$vijdraws=draws[,(p+1):(p+p*(p-1)/2)]
-# res$tvidraws=draws[,(ncol(draws)-p):(ncol(draws)-1)]
-# res$vdraws=draws[,ncol(draws)]
-# res$sidraws=res$vidraws/res$vdraws
-# res$sijdraws=res$vijdraws/res$vdraws
-# res$tsidraws=res$tvidraws/res$vdraws
-# res$vidraws=as.matrix(res$vidraws)
-# colnames(res$vidraws)=paste("V",1:p,sep="")
-# res$vijdraws=as.matrix(res$vijdraws)
-# colnames(res$vijdraws)=paste("V",labs,sep="")
-# res$tvidraws=as.matrix(res$tvidraws)
-# colnames(res$tvidraws)=paste("TV",1:p,sep="")
-# res$vdraws=as.matrix(res$vdraws)
-# colnames(res$vdraws)="V"
-# res$sidraws=as.matrix(res$sidraws)
-# colnames(res$sidraws)=paste("S",1:p,sep="")
-# res$sijdraws=as.matrix(res$sijdraws)
-# colnames(res$sijdraws)=paste("S",labs,sep="")
-# res$tsidraws=as.matrix(res$tsidraws)
-# colnames(res$tsidraws)=paste("TS",1:p,sep="")
-# rm(draws)
-
-# # summaries
-# res$msi=apply(res$sidraws,2,mean)
-# res$msi.sd=apply(res$sidraws,2,sd)
-# res$si.5=apply(res$sidraws,2,quantile,0.5)
-# res$si.lower=apply(res$sidraws,2,quantile,q.lower)
-# res$si.upper=apply(res$sidraws,2,quantile,q.upper)
-# names(res$msi)=paste("S",1:p,sep="")
-# names(res$msi.sd)=paste("S",1:p,sep="")
-# names(res$si.5)=paste("S",1:p,sep="")
-# names(res$si.lower)=paste("S",1:p,sep="")
-# names(res$si.upper)=paste("S",1:p,sep="")
-
-# res$msij=apply(res$sijdraws,2,mean)
-# res$sij.sd=apply(res$sijdraws,2,sd)
-# res$sij.5=apply(res$sijdraws,2,quantile,0.5)
-# res$sij.lower=apply(res$sijdraws,2,quantile,q.lower)
-# res$sij.upper=apply(res$sijdraws,2,quantile,q.upper)
-# names(res$msij)=paste("S",labs,sep="")
-# names(res$sij.sd)=paste("S",labs,sep="")
-# names(res$sij.5)=paste("S",labs,sep="")
-# names(res$sij.lower)=paste("S",labs,sep="")
-# names(res$sij.upper)=paste("S",labs,sep="")
-
-# res$mtsi=apply(res$tsidraws,2,mean)
-# res$tsi.sd=apply(res$tsidraws,2,sd)
-# res$tsi.5=apply(res$tsidraws,2,quantile,0.5)
-# res$tsi.lower=apply(res$tsidraws,2,quantile,q.lower)
-# res$tsi.upper=apply(res$tsidraws,2,quantile,q.upper)
-# names(res$mtsi)=paste("TS",1:p,sep="")
-# names(res$tsi.sd)=paste("TS",1:p,sep="")
-# names(res$tsi.5)=paste("TS",1:p,sep="")
-# names(res$tsi.lower)=paste("TS",1:p,sep="")
-# names(res$tsi.upper)=paste("TS",1:p,sep="")
-
-
-# res$q.lower=q.lower
-# res$q.upper=q.upper
-# res$modeltype=fit$modeltype
 
 class(res)="OpenBT_mopareto"
 
@@ -1066,41 +1056,179 @@ return(res)
 
 
 # Reweight predictions using output of influence.openbt().
-repredict.openbt<-function(dropid=NULL,pred=NULL,infl=NULL,idx=NULL)
+# For method IS_GLOBAL: infl (influence obect) and pred (prediction object to be reweighted)
+#                       Also, idx may be specified to apply weights only to a subset of observations.
+# For method IS_LOCAL_*: pass infl (influence object), xpred (training x's from fit) and fit (fitted OpenBT object)
+repredict.openbt<-function(pred=NULL,infl=NULL,fit=NULL,tc=2)
 {
    if(is.null(pred)) stop("Model prediction object required.\n")
    if(is.null(infl)) stop("Model influence object required.\n")
-   if(class(pred)!="OpenBT_predict") stop("Model prediction object not recognized.\n")
+   if(infl$method=="is_global" && class(pred)!="OpenBT_predict") stop("Model prediction object not recognized.\n")
    if(class(infl)!="OpenBT_influence") stop("Model influence object not recognized.\n")
-   if(infl$method!="IS_GLOBAL") stop("Cannot reweight predictions with influence method ",infl$method,".\n")
-   if(is.null(dropid)) stop("No hold-out specified for reweighting.\n")
-   if(dropid<1) stop("Invalid dropid.\n")
-   if(dropid>infl$np) stop("Invalid dropid.\n")
+   if(class(pred)!="OpenBT_predict") stop("Model pred object not recognized.\n")
+   if(infl$method!="is_global" && infl$method!="is_local_int" && infl$method!="is_local_uint" && infl$method!="is_local_union" && infl$method!="is_local_l1" && infl$method!="is_local_l2") stop("Cannot reweight predictions with influence method ",infl$method,".\n")
 
-
-   #re-weight and return the predictions
+   dropid=infl$infl.obs
+   ninfl=length(dropid)
    res=list()
-   res$mdraws=pred$mdraws
-   if(is.null(idx)) {
-      for(i in 1:nrow(res$mdraws)) {
-         res$mdraws[i,]=res$mdraws[i,]*infl$w[i,dropid]
+   cat("Applying weights\n")
+
+   if(infl$method=="is_global")
+   {
+      res$mdraws=pred$mdraws
+      res$wmat=apply(infl$w,1,prod)
+      #re-weight and return the predictions
+      # for(k in 1:ninfl)
+         # for(i in 1:fit$nd) {
+         #    # res$mdraws[i,]=res$mdraws[i,]*infl$w[i,k]
+         #    res$mdraws[i,]=res$mdraws[i,]*res$wmat[i]
+         # }
+
+      # wbar=apply(infl$w,2,mean)#mean(infl$w)
+      wbar=mean(res$wmat)#mean(infl$w)
+      # res$mdraws=res$mdraws/wbar
+      # res$wmat=infl$w
+      res$wbar=wbar
+      res$mmean=rep(0,nrow(pred$x.test))
+      res$msd=rep(0,nrow(pred$x.test))
+      res$m.5=rep(0,nrow(pred$x.test))
+      res$m.lower=rep(0,nrow(pred$x.test))
+      res$m.upper=rep(0,nrow(pred$x.test))
+      for(i in 1:nrow(pred$x.test)) {
+         res$mmean[i]=wtd.mean(res$mdraws[,i],res$wmat,normwt=TRUE)
+         res$msd[i]=sqrt(wtd.var(res$mdraws[,i],res$wmat,normwt=TRUE))
+         res$m.5[i]=wtd.quantile(res$mdraws[,i],res$wmat,probs=c(0.5),normwt=TRUE)
+         res$m.lower[i]=wtd.quantile(res$mdraws[,i],res$wmat,probs=c(pred$q.lower),normwt=TRUE)
+         res$m.upper[i]=wtd.quantile(res$mdraws[,i],res$wmat,probs=c(pred$q.upper),normwt=TRUE)
+
       }
    }
-   if(!is.null(idx) && length(idx>0)) {
-      for(i in 1:nrow(res$mdraws)) {
-         res$mdraws[i,idx]=res$mdraws[i,idx]*infl$w[i,dropid]
-         res$mdraws[i,-idx]=res$mdraws[i,-idx]*(1/nrow(res$mdraws))
+
+   if(infl$method=="is_local_int" || infl$method=="is_local_uint" || infl$method=="is_local_union" || infl$method=="is_local_l1")
+   {
+
+      if(is.null(fit)) stop("Method is_local_* requires fitted OpenBT_posterior in object fit\n")
+      if(length(fit$xicuts)!=ncol(pred$x.test)) stop("xpred's are not same dimension as trained model\n")
+
+      in_rect<-function(xin,a,b,p)
+      {
+         for(i in 1:length(xin)) {
+            if(xin[i]<a[i] || xin[i]>b[i]) {
+               return(FALSE)
+            }
+         }
+         return(TRUE)
+      }
+
+      # get predictions
+      p=length(fit$xicuts)
+      res$mdraws=pred$mdraws
+
+      # now for each posterior draw, identify all predictions in the hyperrectangle of influence
+     # parallel::mcaffinity(1:tc)
+     # cl=makeCluster(tc)
+     # registerDoParallel(cl)
+      # mcoptions = list(preschedule=TRUE,cores=tc)
+      # wmat=foreach(j=1:nrow(pred$x.test),.combine=cbind,.options.multicore=mcoptions) %dopar% {
+      #    tempwvec=matrix(1,nrow=fit$nd,ncol=1)
+      #    for(i in 1:fit$nd) {
+      #       for(k in 1:ninfl) {
+      #          if(in_rect(pred$x.test[j,],infl$hyperrects[[k]]$a[i,],infl$hyperrects[[k]]$b[i,],p)) {
+      #             tempwvec[i,1]=tempwvec[i,1]*infl$w[i,k,drop=FALSE]
+      #          }
+      #       }
+      #    }
+      #    tempwvec
+      # }
+      # wmat=as.matrix(wmat) # our final weight matrix, should be fit$nd rows x nrow(pred$x.test) columns
+     # stopCluster(cl)
+
+      # Original serial version of the above parallel R code:
+      wmat=matrix(1,nrow=fit$nd,ncol=nrow(pred$x.test)) # our final weight matrix
+
+      for(i in 1:fit$nd) {
+         for(j in 1:nrow(pred$x.test)) { 
+            for(k in 1:ninfl) {
+               if(in_rect(pred$x.test[j,],infl$hyperrects[[k]]$a[i,],infl$hyperrects[[k]]$b[i,],p)) {
+                  # if(wmat[i,j]==1) 
+                     # wmat[i,j]=infl$w[i,k,drop=FALSE]
+                  # else 
+                  wmat[i,j]=wmat[i,j]*infl$w[i,k,drop=FALSE]
+               }
+            }
+         }
+      }
+
+
+      wbar=apply(wmat,2,mean)
+      # res$mdraws=res$mdraws*wmat
+      # res$mdraws=t(t(res$mdraws)/wbar)
+      res$wmat=wmat
+      res$wbar=wbar
+      res$mmean=rep(0,nrow(pred$x.test))
+      res$msd=rep(0,nrow(pred$x.test))
+      res$m.5=rep(0,nrow(pred$x.test))
+      res$m.lower=rep(0,nrow(pred$x.test))
+      res$m.upper=rep(0,nrow(pred$x.test))
+      for(i in 1:nrow(pred$x.test)) {
+         res$mmean[i]=wtd.mean(res$mdraws[,i],res$wmat[,i],normwt=TRUE)
+         res$msd[i]=sqrt(wtd.var(res$mdraws[,i],res$wmat[,i],normwt=TRUE))
+         res$m.5[i]=wtd.quantile(res$mdraws[,i],res$wmat[,i],probs=c(0.5),normwt=TRUE)
+         res$m.lower[i]=wtd.quantile(res$mdraws[,i],res$wmat[,i],probs=c(pred$q.lower),normwt=TRUE)
+         res$m.upper[i]=wtd.quantile(res$mdraws[,i],res$wmat[,i],probs=c(pred$q.upper),normwt=TRUE)
+
+      }
+
+   }
+
+   if(infl$method=="is_local_l2")
+   {
+      if(is.null(fit)) stop("Method is_local_* requires fitted OpenBT_posterior in object fit\n")
+
+      res$mdraws=pred$mdraws
+      wmat=matrix(1/fit$nd,nrow=fit$nd,ncol=nrow(pred$x.test))
+
+      for(j in 1:ninfl) {
+         dvec=rep(0,nrow(pred$x.test))
+         for(k in 1:nrow(pred$x.test)) 
+            dvec[k]=dist(rbind(pred$x.test[k,],infl$x.infl[dropid[[j]],]))
+         idx=which(dvec<0.2)
+         for(i in 1:fit$nd)
+            for(k in idx)
+               if(wmat[i,k]==1/fit$nd) wmat[i,k]=infl$w[i,j,drop=FALSE]
+               else wmat[i,k]=wmat[i,k]*infl$w[i,j,drop=FALSE]
+      }
+
+      wbar=apply(wmat,2,mean)
+      # res$mdraws=res$mdraws*wmat
+      # res$mdraws=t(t(res$mdraws)/wbar)
+      res$wmat=wmat
+      res$wbar=wbar
+      res$mmean=rep(0,nrow(pred$x.test))
+      res$msd=rep(0,nrow(pred$x.test))
+      res$m.5=rep(0,nrow(pred$x.test))
+      res$m.lower=rep(0,nrow(pred$x.test))
+      res$m.upper=rep(0,nrow(pred$x.test))
+      for(i in 1:nrow(pred$x.test)) {
+         res$mmean[i]=wtd.mean(res$mdraws[,i],res$wmat[,i],normwt=TRUE)
+         res$msd[i]=sqrt(wtd.var(res$mdraws[,i],res$wmat[,i],normwt=TRUE))
+         res$m.5[i]=wtd.quantile(res$mdraws[,i],res$wmat[,i],probs=c(0.5),normwt=TRUE)
+         res$m.lower[i]=wtd.quantile(res$mdraws[,i],res$wmat[,i],probs=c(pred$q.lower),normwt=TRUE)
+         res$m.upper[i]=wtd.quantile(res$mdraws[,i],res$wmat[,i],probs=c(pred$q.upper),normwt=TRUE)
+
       }
    }
-   res$mdraws=res$mdraws*nrow(res$mdraws)
+
+
+
    res$sdraws=pred$sdraws
-   res$mmean=apply(res$mdraws,2,mean)
+   # res$mmean=apply(res$mdraws,2,mean)
    res$smean=pred$smean
-   res$msd=apply(res$mdraws,2,sd)
+   # res$msd=apply(res$mdraws,2,sd)
    res$ssd=pred$ssd
-   res$m.5=apply(res$mdraws,2,quantile,0.5)
-   res$m.lower=apply(res$mdraws,2,quantile,pred$q.lower)
-   res$m.upper=apply(res$mdraws,2,quantile,pred$q.upper)
+   # res$m.5=apply(res$mdraws,2,quantile,0.5)
+   # res$m.lower=apply(res$mdraws,2,quantile,pred$q.lower)
+   # res$m.upper=apply(res$mdraws,2,quantile,pred$q.upper)
    res$s.5=pred$s.5
    res$s.lower=pred$s.lower
    res$s.upper=pred$s.upper
@@ -1120,36 +1248,175 @@ repredict.openbt<-function(dropid=NULL,pred=NULL,infl=NULL,idx=NULL)
 
 
 # Calculate various metrics of influence for a regression tree model.
-influence.openbt<-function(x.infl,y.infl,fit=NULL,tc=2,method="IS_GLOBAL")
+influence.openbt<-function(x.infl,y.infl,fit=NULL,infl.obs=NULL,dvec=NULL,tc=2,method="is_local_int")
 {
    if(is.null(fit)) stop("Model fit object required.\n")
    if(class(fit)!="OpenBT_posterior") stop("Model fit object not recognized.\n")
+   if(is.null(infl.obs)) stop("No hold-out drop id specified for reweighting (infl.obs=NULL).\n")
+   if(min(infl.obs)<1) stop("Invalid drop id infl.obs=",infl.obs,".\n")
+   if(max(infl.obs)>nrow(x.infl)) stop("Invalid drop id infl.obs=",infl.obs,".\n")
+   if(method=="is_local_l1" && is.null(dvec)) stop("Invalid dvec for method is_local_l1.\n")
 
    nd=fit$nd
-   np=nrow(x.infl)
-   pp=predict.openbt(fit=fit,x.test=x.infl,tc=tc)
+   # np=nrow(x.infl)
+   ninfl=length(infl.obs)
+   w=matrix(0,nrow=nd,ncol=ninfl)
+   wsum=rep(1,ninfl)
 
-   if(method=="IS_GLOBAL") {
+   if(ninfl==0){
+      stop("Argument infl.obs has no influential observations\n")
+   }
+
+
+   pp=predict.openbt(object=fit,x.test=x.infl,tc=tc)
+
+   if(method=="is_global") {
       # w is an nd by np matrix where the j_th column contains the weights for each
       # nd posterior samples if (x_j,y_j) were removed from the dataset.
-      w=matrix(0,nrow=nd,ncol=np)
-      for(i in 1:nd) w[i,]=(2*pi)^(1/2)*pp$sdraws[i,]*exp(1/(2*pp$sdraws[i,])*(y.infl-pp$mdraws[i,])^2)
-      w=t(t(w)/apply(w,2,sum))
+      for(kk in 1:ninfl)
+         for(i in 1:nd) w[i,kk]=(2*pi)^(1/2)*pp$sdraws[i,infl.obs[kk]]*exp(1/(2*pp$sdraws[i,infl.obs[kk]]^2)*(y.infl[infl.obs[kk]]-pp$mdraws[i,infl.obs[kk]])^2)
+#      w=apply(w,1,prod) # iid BART likelihood => we just combine the different terms productwise.
+#      wsum=sum(w)
+   } 
+   # end IS_GLOBAL
 
-      # Perhaps a simple indicator of which observation has a lot of influence:
-      infl=apply(w,2,max)
-      infl.ids=rep(0,nd)
-      for(i in 1:nd) infl.ids[i]=which(w[i,]==max(w[i,]))
-   }
+   if(method=="is_local_int" || method=="is_local_union" || method=="is_local_uint" || method=="is_local_l1")
+   {
+      p=length(fit$xicuts)
+      m=fit$m
+      mh=fit$mh
+      nd=fit$nd
+      modelname=fit$modelname
+      hrects.int=list()
+      hrects.uint=list()
+      hrects.union=list()
+      hrects.l1=list()
+#      w=matrix(0,nrow=nd,ncol=ninfl)
+#      wsum=rep(1,ninfl)
+
+      for(kk in 1:ninfl) {
+         xd=x.infl[infl.obs[kk],]
+         if(!is.vector(xd)) stop("xd is not a px1 vector in x.infl.\n")
+
+         #--------------------------------------------------
+         #write out config file
+         fout=file(paste(fit$folder,"/config.influence",sep=""),"w")
+         writeLines(c(fit$modelname,fit$xiroot,
+                     paste(nd),paste(m),
+                     paste(mh),paste(p),paste(xd),paste(fit$minx),
+                     paste(fit$maxx),paste(tc)) ,fout)
+         close(fout)
+
+
+         #--------------------------------------------------
+         #run influential hyperrectangle program
+         cmdopt=100 #default to serial/OpenMP
+         runlocal=FALSE
+         cmd="openbtcli --conf"
+         if(Sys.which("openbtcli")[[1]]=="") # not installed in a global locaiton, so assume current directory
+            runlocal=TRUE
+
+         if(runlocal) cmd="./openbtcli --conf"
+
+         cmdopt=system(cmd)
+
+         if(cmdopt==101) # MPI
+         {
+            cmd=paste("mpirun -np ",tc," openbtinfl ",fit$folder,sep="")
+         }
+
+         if(cmdopt==100)  # serial/OpenMP
+         { 
+            if(runlocal)
+               cmd=paste("./openbtinfl ",fit$folder,sep="")
+            else
+               cmd=paste("openbtinfl ",fit$folder,sep="")
+         }
+
+         system(cmd)
+         system(paste("rm -f ",fit$folder,"/config.influence",sep=""))
+
+         #--------------------------------------------------
+         #read in result
+         ii=1
+         a=matrix(0,nrow=nd,ncol=p)
+         b=matrix(0,nrow=nd,ncol=p)
+         au=matrix(0,nrow=nd,ncol=p)
+         bu=matrix(0,nrow=nd,ncol=p)
+         for(i in 1:tc) 
+         {
+            con=file(paste(fit$folder,"/",fit$modelname,".influence",i-1,sep=""))
+            open(con)
+            s=readLines(con,1)
+            while(length(s)>0) {
+               temp=as.numeric(unlist(strsplit(s," ")))
+               a[ii,]=temp[1:p]
+               b[ii,]=temp[(p+1):(2*p)]
+               au[ii,]=temp[(2*p+1):(3*p)]
+               bu[ii,]=temp[(3*p+1):(4*p)]
+               ii=ii+1
+               s=readLines(con,1)
+            }
+            close(con)
+         }
+
+         system(paste("rm -f ",fit$folder,"/",fit$modelname,".influence*",sep=""))
+
+         hrects.int[[kk]]=list()
+         hrects.uint[[kk]]=list()
+         hrects.union[[kk]]=list()
+         hrects.l1[[kk]]=list()
+         hrects.int[[kk]][["a"]]=a
+         hrects.int[[kk]][["b"]]=b
+         hrects.uint[[kk]][["a"]]=matrix(apply(a,2,min),nrow=nd,ncol=p,byrow=TRUE)
+         hrects.uint[[kk]][["b"]]=matrix(apply(b,2,max),nrow=nd,ncol=p,byrow=TRUE)
+         hrects.union[[kk]][["a"]]=au
+         hrects.union[[kk]][["b"]]=bu
+         hrects.l1[[kk]][["a"]]=matrix(xd-dvec,nrow=nd,ncol=p,byrow=TRUE)
+         hrects.l1[[kk]][["b"]]=matrix(xd+dvec,nrow=nd,ncol=p,byrow=TRUE)
+
+         # w is an nd by 1 matrix where containing the weights for each
+         # nd posterior samples if (x[infl.obs,],y[infl.obs]) were removed from the dataset,
+         # where the weight would be applied to any predictions in the corresponding hyperrect
+         # for this draw.  Otherwise, the weight is just 1, giving usual posterior average -- this
+         # is handled in the reweight() function.
+         for(i in 1:nd) w[i,kk]=(2*pi)^(1/2)*pp$sdraws[i,infl.obs[kk]]*exp(1/(2*pp$sdraws[i,infl.obs[kk]]^2)*(y.infl[infl.obs[kk]]-pp$mdraws[i,infl.obs[kk]])^2)
+#         wsum[kk]=sum(w[,kk])
+#         w[,kk]=w[,kk]/sum(w[,kk])
+
+         # Perhaps a simple indicator of which observation has a lot of influence:
+         # infl.max=apply(w,2,max)
+         # infl.mean=apply(w,2,mean)
+         # infl.ids=infl.obs
+      } 
+      # end for kk in 1:length(infl.obs) loop
+   } 
+   #end is_local_*
+   for(i in 1:ninfl) wsum[i]=sum(w[,i])
 
    res=list()
    res$nd=nd
-   res$np=np
+   # res$np=np
    res$x.infl=x.infl
    res$y.infl=y.infl
    res$w=w
-   res$infl=infl
-   res$infl.ids=infl.ids
+   res$wsum=wsum
+   # res$infl.max=infl.max
+   # res$infl.mean=infl.mean
+   res$infl.obs=infl.obs
+   res$hyperrects=NULL
+   if(method=="is_local_int") {
+      res$hyperrects=hrects.int
+   }
+   if(method=="is_local_uint") {
+      res$hyperrects=hrects.uint
+   }
+   if(method=="is_local_union") {
+      res$hyperrects=hrects.union   
+   }
+   if(method=="is_local_l1") {
+      res$hyperrects=hrects.l1   
+   }
    res$method=method
 
    class(res)="OpenBT_influence"
@@ -1170,7 +1437,7 @@ print.OpenBT_influence<-function(infl)
    cat(infl$nd, " posterior samples.\n")
    cat(infl$np, " observations.\n")
 
-   if(infl$method=="IS_GLOBAL") {
+   if(infl$method=="is_global") {
       idx=sort(infl$infl,decreasing=TRUE,index.return=TRUE)$ix
       cat("\nTop 5 maximum weights: ", infl$infl[idx][1:5],"\n")
       cat("\nTop 5 influential observations by weights: \n")
@@ -1189,11 +1456,637 @@ plot.OpenBT_influence<-function(infl)
 {
    tab.ids=table(infl$infl.ids)
 
-   par(mfrow=c(1,2))
-   plot(1:infl$np,infl$infl,xlab="Observation Index",ylab="max.influence",type="h",lwd=2)
-   title(paste("metric: ",infl$method,sep=""))
-   plot(tab.ids,xlab="Observation Index",ylab="Frequency")
-   title(paste("metric: ",infl$method,sep=""))
+   if(infl$method=="is_global") {
+      par(mfrow=c(1,2))
+      plot(1:infl$np,infl$infl,xlab="Observation Index",ylab="max.influence",type="h",lwd=2)
+      title(paste("metric: ",infl$method,sep=""))
+      plot(tab.ids,xlab="Observation Index",ylab="Frequency")
+      title(paste("metric: ",infl$method,sep=""))
+   }
+
+   if(infl$method=="is_local_int" || infl$method=="is_local_union")
+   {
+      # plot hyperrectangles
+      plot(0,0,xlim=c(0,1),ylim=c(0,1),type="n",xlab="x1",ylab="x2")
+      for(i in 1:nrow(infl$hyperrects$a)) rect(infl$hyperrects$a[i,1],infl$hyperrects$a[i,2],infl$hyperrects$b[i,1],infl$hyperrects$b[i,2],col=gray(0.5,alpha=0.1),border=NA)
+   }
+}
+
+
+
+# Computer Model Calibration a BART emulator and BART discrepancy.
+calibrate.openbt<-function(xc,yc,xf,yf,xdims=NULL,caldims=NULL,
+                           calprior="normal",calpriora=NULL,calpriorb=NULL,
+                           ntreec=NULL,ntreef=NULL,ndpost=1000,
+                           nskip=100,kc=NULL,kf=NULL,power=2,base=0.95,tc=2,
+                           sigmac=rep(1,length(yc)),sigmaf=rep(1,length(yf)),
+                           fmeanc=0.0,fmeanf=0.0,overallsdc=NULL,
+                           overallnuc=NULL,overallsdf=NULL,overallnuf=NULL,
+                           chv=cor(xc,method="spearman"),pbd=0.7,pb=0.5,
+                           stepwpert=0.1,probchv=0.1,minnumbot=5,printevery=100,
+                           numcut=100,xicuts=NULL,nadapt=1000,adaptevery=100,
+                           model="bart",modelname="model",summarystats=FALSE)
+{
+   if(is.null(xdims)) stop("xdims must be specified.\n")
+   if(is.null(caldims)) stop("caldims must be specified.\n")
+   numx=length(xdims)
+   numcal=length(caldims)
+   if(ncol(xc)!=numx+numcal) stop("xc not compatible with xdims+caldims.\n")
+   if(ncol(xf)!=numx) stop("xf not compatible with xdims.\n")
+   if(is.null(calprior)) stop("Invalid calibration parameter prior type specified.\n")
+   if(is.null(calpriora)) stop("Invalid calibration parameter prior: calpriora.\n")
+   if(is.null(calpriorb)) stop("Invalid calibration parameter prior: calpriorb.\n")
+
+   if(length(calprior)==1) calprior=rep(calprior,numcal)
+   if(length(calpriora)==1) calpriora=rep(calpriora,numcal)
+   if(length(calpriorb)==1) calpriorb=rep(calpriorb,numcal)
+
+   if(length(calprior)!=numcal || length(calpriora)!=numcal || length(calpriorb)!=numcal)
+      stop("Invalid calibration parameter prior: does not match number of calibration parameters.\n")
+
+   calpriortype=rep(NULL,numcal)
+   for(i in 1:numcal) {
+      if(calprior[i]=="normal") calpriortype[i]=1
+      if(calprior[i]=="uniform") calpriortype[i]=0
+      if(is.null(calpriortype[i])) stop("Invalid calibration parameter prior type specified.\n")
+      if(calpriortype[i]==1 && calpriorb[i]<=0) stop("Invalid variance specified in calibration parameter prior.\n")
+   }
+
+   ntreehc=NULL
+   ntreehf=NULL
+   #--------------------------------------------------
+   # model type definitions
+   modeltype=rep(0,2) # undefined
+   MODEL_BT=1
+   MODEL_BINOMIAL=2
+   MODEL_POISSON=3
+   MODEL_BART=4
+   MODEL_HBART=5
+   MODEL_PROBIT=6
+   MODEL_MODIFIEDPROBIT=7
+   MODEL_MERCK_TRUNCATED=8
+
+
+   if(length(model)==1) model=rep(model,2)
+   if( (model[1]!="bart" && model[1]!="hbart") || (model[2]!="bart" && model[2]!="hbart") )
+   { 
+      cat("Model type not specified.\n")
+      cat("Available options are:\n")
+      cat("model='bart'\n")
+      cat("model='hbart'\n")
+
+      stop("missing model type.\n")
+   }
+   if(model[1]=="bart")
+   {
+      modeltype[1]=MODEL_BART
+      if(is.null(ntreec)) ntreec=200
+      if(is.null(ntreehc)) ntreehc=1
+      if(is.null(kc)) kc=2
+      if(is.null(overallsdc)) overallsdc=sd(yc)
+      if(is.null(overallnuc)) overallnuc=10
+      pbdc=c(pbd[1],0.0)
+   }
+   if(model[1]=="hbart")
+   {
+      modeltype=MODEL_HBART
+      if(is.null(ntreec)) ntreec=200
+      if(is.null(ntreehc)) ntreehc=40
+      if(is.null(kc)) kc=5
+      if(is.null(overallsdc)) overallsdc=sd(yc)
+      if(is.null(overallnuc)) overallnuc=10
+      pbdc=pbd
+   }
+   if(model[2]=="bart")
+   {
+      modeltype[2]=MODEL_BART
+      if(is.null(ntreef)) ntreef=200
+      if(is.null(ntreehf)) ntreehf=1
+      if(is.null(kf)) kf=2
+      if(is.null(overallsdf)) overallsdf=sd(yf)
+      if(is.null(overallnuf)) overallnuf=10
+      pbdf=c(pbd[1],0.0)
+   }
+   if(model[2]=="hbart")
+   {
+      modeltype[2]=MODEL_HBART
+      if(is.null(ntreef)) ntreef=200
+      if(is.null(ntreehf)) ntreehf=40
+      if(is.null(kf)) kf=5
+      if(is.null(overallsdf)) overallsdf=sd(yf)
+      if(is.null(overallnuf)) overallnuf=10
+      pbdf=pbd
+   }
+
+
+   #--------------------------------------------------
+   nd = ndpost
+   burn = nskip
+   mc = ntreec
+   mhc = ntreehc
+   mf = ntreef
+   mhf = ntreehf
+   #--------------------------------------------------
+   # simulator data
+   nc = length(yc)
+   p = ncol(xc)
+   pdelta = ncol(xf)
+   xpred = matrix(NA,nrow=nf,ncol=p)
+   for(i in 1:numcal) {
+      if(calpriortype[i])
+         xpred[,caldims[i]]=calpriora[i]
+      else
+         xpred[,caldims[i]]=calpriora[i]+(calpriorb[i]-calpriora[i])/2.0
+   }
+   for(i in 1:pdelta) {
+      xpred[,xdims[i]]=xf[,i]
+   }
+#   xpred = t(xpred)
+#   xc = t(xc)
+   nf = length(yf)
+#   xf = t(xf)
+   # if(modeltype==MODEL_BART || modeltype==MODEL_HBART)
+   # {
+   yc=yc-fmeanc
+   yf=yf-fmeanf
+   fmeanc.out=paste(fmeanc)
+   fmeanf.out=paste(fmeanf)
+   # }
+   # if(modeltype==MODEL_PROBIT || modeltype==MODEL_MODIFIEDPROBIT)
+   # {
+   #    fmean.out=paste(qnorm(fmean))
+   #    uniqy=sort(unique(y.train))
+   #    if(length(uniqy)>2) stop("Invalid y.train: Probit requires dichotomous response coded 0/1")
+   #    if(uniqy[1]!=0 || uniqy[2]!=1) stop("Invalid y.train: Probit requires dichotomous response coded 0/1")
+   # }
+   #--------------------------------------------------
+   #cutpoints
+   if(!is.null(xicuts)) # use xicuts
+   {
+      xic=xicuts
+   }
+   else # default to equal numcut per dimension
+   {
+      xic=vector("list",p)
+      minxc=floor(apply(xc,2,min))
+      maxxc=ceiling(apply(xc,2,max))
+      for(i in 1:p)
+      {
+         xinc=(maxxc[i]-minxc[i])/(numcut+1)
+         xic[[i]]=(1:numcut)*xinc+minxc[i]
+      }
+   }
+   xif=vector("list",numx)
+   for(i in 1:numx)
+      xif[[i]]=xic[[xdims[i]]]
+
+   #--------------------------------------------------
+   if(modeltype[1]==MODEL_BART || modeltype[1]==MODEL_HBART)
+   {
+      rgc = range(yc)
+   }
+   if(modeltype[2]==MODEL_BART || modeltype[2]==MODEL_HBART)
+   {
+      rgf = range(yf)
+   }
+   # if(modeltype==MODEL_PROBIT || modeltype==MODEL_MODIFIEDPROBIT)
+   # {
+   #    rgy = c(-2,2)
+   # }
+   tauc =  (rgc[2]-rgc[1])/(2*sqrt(mc)*kc)
+   tauf =  (rgf[2]-rgf[1])/(2*sqrt(mf)*kf)
+
+   #--------------------------------------------------
+   overalllambdac = overallsdc^2
+   overalllambdaf = overallsdf^2
+   #--------------------------------------------------
+   powerh=power
+   baseh=base
+   if(length(power)>1) {
+      powerh=power[2]
+      power=power[1]
+   }
+   if(length(base)>1) {
+      baseh=base[2]
+      base=base[1]
+   }
+   #--------------------------------------------------
+   pbdch=pbdc
+   pbdfh=pbdf
+   pbh=pb
+   if(length(pbdc)>1) {
+      pbdch=pbdc[2]
+      pbdc=pbdc[1]
+   }
+   if(length(pbdf)>1) {
+      pbdfh=pbdf[2]
+      pbdf=pbdf[1]
+   }
+   if(length(pb)>1) {
+      pbh=pb[2]
+      pb=pb[1]
+   }
+   cat("Model: Bayesian Regression Tree based Computer Model Calibration\n")
+   #--------------------------------------------------
+   if(modeltype[1]==MODEL_BART)
+   {
+      cat("\tEmulator: BART\n")
+   }
+   #--------------------------------------------------
+   if(modeltype[1]==MODEL_HBART)
+   {
+      cat("\tEmulator: Heteroscedastic BART\n")
+   }
+   #--------------------------------------------------
+   if(modeltype[2]==MODEL_BART)
+   {
+      cat("\tDiscrepancy: BART\n")
+   }
+   #--------------------------------------------------
+   if(modeltype[2]==MODEL_HBART)
+   {
+      cat("\tDiscrepancy: Heteroscedastic BART\n")
+   }
+
+   #--------------------------------------------------
+   stepwperth=stepwpert
+   if(length(stepwpert)>1) {
+      stepwperth=stepwpert[2]
+      stepwpert=stepwpert[1]
+   }
+   #--------------------------------------------------
+   probchvh=probchv
+   if(length(probchv)>1) {
+      probchvh=probchv[2]
+      probchv=probchv[1]
+   }
+   #--------------------------------------------------
+   minnumboth=minnumbot
+   if(length(minnumbot)>1) {
+      minnumboth=minnumbot[2]
+      minnumbot=minnumbot[1]
+   }
+
+   #--------------------------------------------------
+   #write out config file
+   xcroot="xc"
+   ycroot="yc"
+   scroot="sc"
+   chgvcroot="chgvc"
+   xicroot="xic"
+   xfroot="xf"
+   yfroot="yf"
+   sfroot="sf"
+   xproot="xpred"
+   chgvfroot="chgvf"
+   xifroot="xif"
+   folder=tempdir(check=TRUE)
+   if(!dir.exists(folder)) dir.create(folder)
+   tmpsubfolder=tempfile(tmpdir="")
+   tmpsubfolder=substr(tmpsubfolder,5,nchar(tmpsubfolder))
+   tmpsubfolder=paste("openbt",tmpsubfolder,sep="")
+   folder=paste(folder,"/",tmpsubfolder,sep="")
+   if(!dir.exists(folder)) dir.create(folder)
+   fout=file(paste(folder,"/config.calibrate",sep=""),"w")
+   writeLines(c(paste(modeltype),xcroot,ycroot,xfroot,yfroot,xproot,fmeanc.out,fmeanf.out,
+               paste(mc),paste(mhc),paste(mf),paste(mhf),paste(nd),paste(burn),
+               paste(nadapt),paste(adaptevery),paste(tauc),paste(overalllambdac),
+               paste(overallnuc),paste(tauf),paste(overalllambdaf),paste(overallnuf),
+               paste(base),paste(power),paste(baseh),paste(powerh),
+               paste(tc),paste(scroot),paste(sfroot),paste(chgvcroot),paste(chgvfroot),
+               paste(pb),paste(pbdc),paste(pbdch),
+               paste(pbdf),paste(pbdfh),paste(stepwpert),paste(stepwperth),
+               paste(probchv),paste(probchvh),paste(minnumbot),paste(minnumboth),
+               paste(printevery),paste(xicroot),paste(xifroot),paste(modelname),
+               paste(as.integer(summarystats)),paste(numcal),paste(caldims-1),paste(calpriortype),
+               paste(calpriora),paste(calpriorb)),fout)
+   close(fout)
+
+
+   #--------------------------------------------------
+   #write out data subsets
+   nslv=tc-1
+   # yc data
+   yclist=split(yc,(seq(nc)-1) %/% (nc/nslv))
+   for(i in 1:nslv) write(yclist[[i]],file=paste(folder,"/",ycroot,i,sep=""))
+   xclist=split(as.data.frame(xc),(seq(nc)-1) %/% (nc/nslv))
+   for(i in 1:nslv) write(t(xclist[[i]]),file=paste(folder,"/",xcroot,i,sep=""))
+#stop("done")
+
+   sclist=split(sigmac,(seq(nc)-1) %/% (nc/nslv))
+   for(i in 1:nslv) write(sclist[[i]],file=paste(folder,"/",scroot,i,sep=""))
+   chv[is.na(chv)]=0 # if a var has 0 levels it will have a cor of NA so we'll just set those to 0.
+   write(chv,file=paste(folder,"/",chgvcroot,sep=""))
+   for(i in 1:p) write(xic[[i]],file=paste(folder,"/",xicroot,i,sep=""))
+   # yf data
+   yflist=split(yf,(seq(nf)-1) %/% (nf/nslv))
+   for(i in 1:nslv) write(yflist[[i]],file=paste(folder,"/",yfroot,i,sep=""))
+   xflist=split(as.data.frame(xf),(seq(nf)-1) %/% (nf/nslv))
+   for(i in 1:nslv) write(t(xflist[[i]]),file=paste(folder,"/",xfroot,i,sep=""))
+   sflist=split(sigmaf,(seq(nf)-1) %/% (nf/nslv))
+   for(i in 1:nslv) write(sflist[[i]],file=paste(folder,"/",sfroot,i,sep=""))
+   write(chv[xdims,xdims],file=paste(folder,"/",chgvfroot,sep=""))
+   for(i in 1:pdelta) write(xif[[i]],file=paste(folder,"/",xifroot,i,sep=""))
+   rm(chv)
+   # xpred
+   xplist=split(as.data.frame(xpred),(seq(nf)-1) %/% (nf/nslv))
+   for(i in 1:nslv) write(t(xplist[[i]]),file=paste(folder,"/",xproot,i,sep=""))
+
+   #--------------------------------------------------
+   #run program
+   cmdopt=100 #default to serial/OpenMP
+   runlocal=FALSE
+   cmd="openbtcalibrate --conf"
+   if(Sys.which("openbtcalibrate")[[1]]=="") # not installed in a global locaiton, so assume current directory
+      runlocal=TRUE
+
+   if(runlocal) cmd="./openbtcalibrate --conf"
+
+   cmdopt=system(cmd)
+
+   if(cmdopt==101) # MPI
+   {
+      cmd=paste("mpirun -np ",tc," openbtcalibrate ",folder,sep="")
+   }
+
+   if(cmdopt==100)  # serial/OpenMP
+   { 
+      if(runlocal)
+         cmd=paste("./openbtcalibrate ",folder,sep="")
+      else
+         cmd=paste("openbtcalibrate ",folder,sep="")
+   }
+   #
+   system(cmd)
+   system(paste("rm -f ",folder,"/config.calibrate",sep=""))
+
+
+   #--------------------------------------------------
+   # load in the theta posterior draws
+   thetas=scan(paste(folder,"/model.eta.theta.fit",sep=""),quiet=TRUE)
+   thetas=matrix(thetas,ncol=numcal,byrow=T)
+
+
+   res=list()
+   res$modeltype=modeltype
+   res$model=model
+   res$xcroot=xcroot; res$ycroot=ycroot; 
+   #res$xfroot=xfroot; res$yfroot=yfroot; 
+   res$xproot=xproot;
+   res$mc=mc; res$mhc=mhc; 
+   #res$mf=mf; res$mhf=mhf; 
+   res$p=p; 
+   #res$pdelta=pdelta;
+   res$nd=nd; res$burn=burn; res$nadapt=nadapt; res$adaptevery=adaptevery; res$tauc=tauc; res$overalllambdac=overalllambdac
+   res$overallnuc=overallnuc; 
+   #res$tauf=tauf; res$overalllambdaf=overalllambdaf; res$overallnuf=overallnuf; 
+   res$base=base; res$power=power; res$baseh=baseh; res$powerh=powerh
+   res$k=numx+numcal;
+   res$tc=tc; res$scroot=scroot; 
+   #res$sfroot=sfroot; 
+   res$chgvcroot=chgvcroot;
+   #res$chgvfroot=chgvfroot; 
+   res$pb=pb; res$pbdc=pbdc; res$pbdch=pbdch; 
+   #res$pbdf=pbdf; res$pbdfh=pbdfh;
+   res$stepwpert=stepwpert; res$stepwperth=stepwperth;
+   res$probchv=probchv; res$probchvh=probchvh; res$minnumbot=minnumbot; res$minnumboth=minnumboth
+   res$printevery=printevery; res$xicroot=xicroot; 
+   #res$xifroot=xifroot; 
+   res$minxc=minxc; res$maxxc=maxxc;
+   res$xdims=xdims; res$numcal=numcal; res$caldims=caldims; res$calpriortype=calpriortype; res$calpriora=calpriora;
+   res$calpriorb=calpriorb; res$summarystats=summarystats; res$modelname=paste(modelname,".eta",sep="")
+   class(xic)="OpenBT_cutinfo"
+   class(xif)="OpenBT_cutinfo"
+   res$xiccuts=xic
+#   res$xifcuts=xif
+   res$fmeanc=fmeanc.out;
+#   res$fmeanf=fmeanf.out;
+   res$theta=thetas
+   res$folder=folder
+
+   res$delta$modeltype=modeltype[2]
+   res$delta$model=model
+   res$delta$xroot=xfroot
+   res$delta$yroot=yfroot
+   res$delta$xproot=xproot
+   res$delta$k=numx
+   res$delta$m=mf
+   res$delta$mh=mhf
+   res$delta$p=pdelta
+   res$delta$nd=nd
+   res$delta$burn=burn
+   res$delta$nadapt=nadapt
+   res$delta$adaptevery=adaptevery
+   res$delta$tau=tauf
+   res$delta$overalllambda=overalllambdaf
+   res$delta$overallnu=overallnuf
+   res$delta$base=base
+   res$delta$power=power
+   res$delta$baseh=baseh
+   res$delta$powerh=powerh
+   res$delta$chgvroot=chgvfroot
+   res$delta$pb=pb
+   res$delta$pbd=pbdf
+   res$delta$pbdh=pbdfh
+   res$delta$stepwpert=stepwpert
+   res$delta$stepwperth=stepwperth
+   res$delta$probchv=probchv
+   res$delta$probchvh=probchvh
+   res$delta$minnumbot=minnumbot
+   res$delta$minnumboth=minnumboth
+   res$delta$printevery=printevery
+   res$delta$xiroot=xifroot
+   res$delta$summarystats=summarystats
+   res$delta$modelname=paste(modelname,".delta",sep="")
+   res$delta$xicuts=xif
+   res$delta$fmean=fmeanf.out
+   res$delta$folder=folder
+   class(res$delta)="OpenBT_posterior"
+
+
+   class(res)="OpenBT_calibrate_posterior"
+
+   return(res)
+}
+
+
+emulate.openbt = function(
+fit=NULL,
+x.test=NULL,
+tc=2,
+fmeanc=fit$fmeanc,
+fmeanf=fit$delta$fmean,
+q.lower=0.025,
+q.upper=0.975
+)
+{
+
+   # model type definitions
+   MODEL_BT=1
+   MODEL_BINOMIAL=2
+   MODEL_POISSON=3
+   MODEL_BART=4
+   MODEL_HBART=5
+   MODEL_PROBIT=6
+   MODEL_MODIFIEDPROBIT=7
+   MODEL_MERCK_TRUNCATED=8
+
+   #--------------------------------------------------
+   # params
+   if(is.null(fit)) stop("No fitted model specified!\n")
+   if(is.null(x.test)) stop("No emulation points specified!\n")
+   if(class(fit)!="OpenBT_calibrate_posterior") stop("Invalid object passed to emulate.openbt()\n")
+
+   xdims=fit$xdims
+   caldims=fit$caldims
+   nslv=tc
+   x.test=as.matrix(x.test)
+   pdelta=ncol(x.test)
+   if(pdelta!=fit$delta$p) stop("x.test has incorrect dimensions.\n")
+   n=nrow(x.test)
+   p=fit$p
+   x.eta.test=matrix(0,nrow=n,ncol=p)
+   x.eta.test[,xdims]=x.test
+
+   # Get discrepancy posterior first
+   cat("Drawing from discrepancy posterior...\n")
+   fit.delta=predict.openbt(fit$delta,x.test=x.test,tc=tc,fmean=fmeanf)
+
+   # Get eta posterior next
+   cat("Drawing from emulator posterior...\n")
+   xeroot="xe"
+   xdroot="xd"
+
+   if( (fit$modeltype[1]==MODEL_BART || fit$modeltype[1]==MODEL_HBART) && (fit$modeltype[2]==MODEL_BART || fit$modeltype[2]==MODEL_HBART) )
+   {
+      fmeanc.out=paste(fmeanc)
+      fmeanf.out=paste(fmeanf)
+   }
+   else stop("Invalid model passed to emulate.openbt()\n")
+   # if(fit$modeltype==MODEL_PROBIT || fit$modeltype==MODEL_MODIFIEDPROBIT)
+   # {
+   #    fmean.out=paste(qnorm(fmean))
+   # }
+
+
+   #--------------------------------------------------
+   #write out config file
+   fout=file(paste(fit$folder,"/config.emulate",sep=""),"w")
+   writeLines(c(paste(fit$modelname),paste(fit$modeltype),fit$xicroot,
+               xeroot,paste(fit$nd),paste(fit$mc),
+               paste(fit$mhc),paste(p),paste(pdelta),
+               paste(fit$numcal),paste(caldims-1),paste(tc),
+               fmeanc.out), fout)
+   close(fout)
+
+
+
+   #--------------------------------------------------
+   #write out data subsets
+   #folder=paste(".",fit$modelname,"/",sep="")
+   xelist=split(as.data.frame(x.eta.test),(seq(n)-1) %/% (n/nslv))
+   for(i in 1:nslv) write(t(xelist[[i]]),file=paste(fit$folder,"/",xeroot,i-1,sep=""))
+   xdlist=split(as.data.frame(x.test),(seq(n)-1) %/% (n/nslv))
+   for(i in 1:nslv) write(t(xdlist[[i]]),file=paste(fit$folder,"/",xdroot,i-1,sep=""))
+   for(i in 1:p) write(fit$xiccuts[[i]],file=paste(fit$folder,"/",fit$xicroot,i,sep=""))
+   for(i in 1:pdelta) write(fit$xifcuts[[i]],file=paste(fit$folder,"/",fit$xifroot,i,sep=""))
+
+
+   #--------------------------------------------------
+   #run prediction program
+   cmdopt=100 #default to serial/OpenMP
+   runlocal=FALSE
+   cmd="openbtcli --conf"
+   if(Sys.which("openbtcli")[[1]]=="") # not installed in a global location, so assume current directory
+      runlocal=TRUE
+
+   if(runlocal) cmd="./openbtcli --conf"
+
+   cmdopt=system(cmd)
+
+   if(cmdopt==101) # MPI
+   {
+      cmd=paste("mpirun -np ",tc," openbtemulate ",fit$folder,sep="")
+   }
+
+   if(cmdopt==100)  # serial/OpenMP
+   { 
+      if(runlocal)
+         cmd=paste("./openbtemulate ",fit$folder,sep="")
+      else
+         cmd=paste("openbtemulate ",fit$folder,sep="")
+   }
+
+   #cmd=paste("mpirun -np ",tc," openbtpred",sep="")
+   #cat(cmd)
+   system(cmd)
+   system(paste("rm -f ",fit$folder,"/config.emulate",sep=""))
+
+
+#--------------------------------------------------
+#format and return
+res=list()
+
+
+# Read in eta posterior
+fnames=list.files(fit$folder,pattern=paste(fit$modelname,".mdraws*",sep=""),full.names=TRUE)
+res$mdraws=as.matrix(do.call(cbind,sapply(fnames,data.table::fread)))
+fnames=list.files(fit$folder,pattern=paste(fit$modelname,".sdraws*",sep=""),full.names=TRUE)
+res$sdraws=as.matrix(do.call(cbind,sapply(fnames,data.table::fread)))
+
+system(paste("rm -f ",fit$folder,"/",fit$modelname,".mdraws*",sep=""))
+system(paste("rm -f ",fit$folder,"/",fit$modelname,".sdraws*",sep=""))
+
+res$mmean=apply(res$mdraws,2,mean)
+res$smean=apply(res$sdraws,2,mean)
+res$msd=apply(res$mdraws,2,sd)
+res$ssd=apply(res$sdraws,2,sd)
+res$m.5=apply(res$mdraws,2,quantile,0.5)
+res$m.lower=apply(res$mdraws,2,quantile,q.lower)
+res$m.upper=apply(res$mdraws,2,quantile,q.upper)
+res$s.5=apply(res$sdraws,2,quantile,0.5)
+res$s.lower=apply(res$sdraws,2,quantile,q.lower)
+res$s.upper=apply(res$sdraws,2,quantile,q.upper)
+res$pdraws=NULL
+res$pmean=NULL
+res$psd=NULL
+res$p.5=NULL
+res$p.lower=NULL
+res$p.upper=NULL
+res$zdraws=res$mdraws+fit.delta$mdraws
+res$zmean=apply(res$zdraws,2,mean)
+res$zsd=apply(res$zdraws,2,sd)
+res$z.5=apply(res$zdraws,2,quantile,0.5)
+res$z.lower=apply(res$zdraws,2,quantile,q.lower)
+res$z.upper=apply(res$zdraws,2,quantile,q.upper)
+
+if(fit$modeltype==MODEL_PROBIT || fit$modeltype==MODEL_MODIFIEDPROBIT)
+{
+   res$pdraws=read.table(paste(fit$folder,"/",fit$modelname,".pdraws",0,sep=""))
+   for(i in 2:nslv)
+   {
+      res$pdraws=cbind(res$pdraws,read.table(paste(fit$folder,"/",fit$modelname,".pdraws",i-1,sep="")))
+   }
+
+   system(paste("rm -f ",fit$folder,"/",fit$modelname,".pdraws*",sep=""))
+
+   res$pdraws=as.matrix(res$pdraws)
+   res$pmean=apply(res$pdraws,2,mean)
+   res$psd=apply(res$pdraws,2,sd)
+   res$p.5=apply(res$pdraws,2,quantile,0.5)
+   res$p.lower=apply(res$pdraws,2,quantile,q.lower)
+   res$p.upper=apply(res$pdraws,2,quantile,q.upper)
+}
+
+res$q.lower=q.lower
+res$q.upper=q.upper
+res$modeltype=fit$modeltype
+
+res$delta=fit.delta
+
+class(res)="OpenBT_emulate"
+
+return(res)
 }
 
 
@@ -1507,7 +2400,7 @@ print.OpenBT_cutinfo<-function(xi)
 
 # Takes the n x p design matrix and a scalar or vector of number of cutpoints 
 # per variable, returns a BARTcutinfo object with variables/cutpoints initalized.
-makecuts<-function(x,numcuts)
+makecuts.openbt<-function(x,numcuts)
 {
    p=ncol(x)
    if(length(numcuts)==1)
@@ -1536,7 +2429,7 @@ makecuts<-function(x,numcuts)
 # Takes an existing OpenBT_cutinfo object xi and the particular variable to update, id,
 # and the vector of cutpoints to manually assign to that variable, updates and returns
 # the modified OpenBT_cutinfo object.
-setvarcuts<-function(xi,id,cutvec)
+setvarcuts.openbt<-function(xi,id,cutvec)
 {
    p=length(xi)
    if(id>p || id<1)
