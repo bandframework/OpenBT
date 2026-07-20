@@ -54,54 +54,18 @@ needs.
 
 No work will be carried out by default with the calls ``tox`` and ``tox -r``.
 
-The following tasks can be run from within the directory hierarchy that contains
-the |openbt| |tox| configuration file ``/path/to/OpenBT/openbt_pypkg/tox.ini``:
+Run the following from the directory hierarchy that contains the |openbt|
+|tox| configuration file ``/path/to/OpenBT/openbt_pypkg/tox.ini`` to see the
+full list of available environments and what each one does:
 
-* ``tox -r -e nocoverage``
+.. code-block:: console
 
-  * Execute the full test suite for the |openbt| Python package using the code
-    installed into Python.
+    $ tox list -v
 
-* ``tox -r -e coverage``
-
-  * Execute the full test suite for the |openbt| Python package and save
-    coverage results to a coverage file.
-  * The test runs the package code in the local clone rather than code installed
-    into Python so that coverage results are clean and straightforward.
-  * If the environment variable ``COVERAGE_FILE`` is set, then this is the
-    coverage file that will be written to.  If it is not specified, then the
-    coverage results are written to ``.coverage_openbt``.
-
-* ``tox -r -e report``
-
-  * It is intended that this be run after or with ``coverage``.
-  * Display a code coverage report for the |openbt| package's full test suite
-    and generate XML and HTML versions of the report.
-  * The environment variables ``COVERAGE_XML`` and ``COVERAGE_HTML`` can be
-    provided to specify the names of the files that the associated reports
-    should be written to.  If ``COVERAGE_XML`` is not specified, the XML report
-    is written to ``coverage.xml``.  If ``COVERAGE_HTML`` is not provided, the
-    HTML report is written to ``htmlcov``.
-
-* ``tox -r -e check``
-
-  * Run several checks on the code to report possible issues.
-  * No files are altered automatically by this task.
-
-* ``tox -r -e html``
-
-  * Generate and serve the |openbt| documentation locally as HTML via a local
-    server at ``http://127.0.0.1:8000``.  The browser reloads automatically
-    whenever documentation source files are changed.
-
-* ``tox -r -e pdf``
-
-  * Generate and render the |openbt| documentation locally as a PDF file.
-  * Users are responsible for installing ``make`` and a compatible LaTeX
-    installation for immediate use by |tox|.
-
-Additionally, you can run any combination of the above such as
-``tox -r -e report,coverage``.
+Environments can be combined in a single invocation, e.g.
+``tox -r -e report,coverage``. Users needing ``pdf`` should note that |tox|
+does not install ``make`` or a LaTeX distribution; those must be installed
+separately.
 
 Direct use of |tox| virtual environments
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -132,36 +96,17 @@ Note that using the ``coverage`` virtual environment directly can be
 particularly useful since the package is installed in editable mode and
 therefore facilitates interactive development and testing of the Python code.
 
-|Tox|'s ``-r`` flag takes a conservative approach by wiping and fully
-rebuilding the virtual environment from scratch on every invocation, which
-guarantees a clean state but adds overhead each time.  For iterative work this
-accumulates quickly.  The ``html`` environment illustrates how to set up the
-environment once and then work flexibly inside it rather than letting |tox|
-drive every step.
-
-When |tox| runs the ``html`` environment it launches ``sphinx-autobuild``, a
-live-reload server.  A developer who wants to invoke ``sphinx-build`` with
-specific flags, rebuild on demand, or simply skip the server overhead can
-instead create the environment once and activate it directly:
+The ``html`` environment can be activated directly in the same way to rebuild
+documentation iteratively without paying the cost of a full |tox| rebuild each
+time:
 
 .. code-block:: console
 
     $ cd /path/to/OpenBT/openbt_pypkg
     $ tox -r -e html
-    $ # Press Ctrl+C to stop sphinx-autobuild once the environment is ready.
     $ . ./.tox/html/bin/activate
     $ which sphinx-build
     $ sphinx-build -W -E -b html ../docs ../docs/build_html
-
-On subsequent documentation iterations only the ``sphinx-build`` command is
-needed — the environment is already activated and no |tox| rebuild is required.
-Omitting ``-E`` on later runs reuses Sphinx's cached environment and speeds up
-incremental builds.  The live-reload server can also be started directly from
-the activated environment when it is useful:
-
-.. code-block:: console
-
-    $ sphinx-autobuild -W -b html ../docs ../docs/build_html
 
 Eigen
 -----
@@ -178,10 +123,10 @@ Eigen does not need to be installed manually.  The |openbt| Meson build system
 handles Eigen automatically in two steps.  First, Meson searches for an
 existing system-wide Eigen installation discoverable |via| ``pkg-config``.  If
 found, that installation is used for the build.  If not found, Meson falls back
-to the ``subprojects/eigen.wrap`` file, which instructs it to download Eigen
-5.0.1 automatically from GitLab and use it internally for that build.  As a
-result, Eigen is always available to the build regardless of whether it is
-installed on the system.
+to the ``subprojects/eigen.wrap`` file, which instructs it to download a
+pinned Eigen version automatically from GitLab and use it internally for that
+build.  As a result, Eigen is always available to the build regardless of
+whether it is installed on the system.
 
 Developers on macOS who prefer to have a system-wide installation can install
 Eigen |via| Homebrew:
@@ -203,7 +148,7 @@ Please refer to :ref:`get_started_cpp:Meson installation` for detailed
 installation instructions.
 
 Build Process with Python
-~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The Meson build is not invoked directly by developers.  It is triggered
 automatically when the |openbt| Python package is installed |via|
@@ -219,20 +164,11 @@ or in editable mode |via|
 
     $ python -m pip install -e .
 
-Internally, ``setup.py`` defines a custom ``build_clt`` command that runs the
-following three Meson commands sequentially from within the ``cpp/`` directory:
-
-.. code-block:: console
-
-    $ meson setup --wipe --clearcache --buildtype=release builddir \
-          -Dprefix=/path/to/src/openbt -Duse_mpi=true -Dpypkg=true
-    $ meson compile -v -C builddir
-    $ meson install --quiet -C builddir
-
-The ``--wipe`` flag deletes and recreates ``builddir`` before every install,
-ensuring a clean compile from scratch.  The ``--clearcache`` flag clears
-Meson's dependency detection cache, forcing it to re-detect the compiler, MPI,
-and Eigen installations.
+Internally, ``setup.py`` defines a custom ``build_clt`` command that wipes and
+rebuilds ``cpp/builddir`` from scratch on every install, forcing Meson to
+re-detect the compiler, MPI, and Eigen installations rather than reusing
+stale detection results. Developers who need the exact Meson invocation can
+inspect ``build_clt`` in ``setup.py`` directly.
 
 Files and Directories Created
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -243,19 +179,10 @@ A successful ``pip install`` creates the following files and directories:
   compiles all C++ source files into object files.  This directory is wiped and recreated on
   every ``pip install`` and can be deleted safely at any time.
 
-* ``openbt_pypkg/src/openbt/bin/`` — The eight compiled C++ command line
-  tools installed by ``meson install``:
-
-  .. code-block:: console
-
-      openbtcli         openbtpred        openbtmixingwts
-      openbtmixing      openbtmixingpred  openbtmopareto
-      openbtsobol       openbtvartivity
-
-  .. note::
-      Only ``openbtcli``, ``openbtpred``, and ``openbtmixingwts`` are
-      included in the distributed package.  All eight are compiled and
-      installed to disk regardless.
+* ``openbt_pypkg/src/openbt/bin/`` — The compiled C++ command line tools
+  installed by ``meson install``.  Only a subset of these are included in the
+  distributed package; the rest are still compiled and installed to disk.
+  See ``cpp/meson.build`` for the current list of built tools.
 
 * ``openbt_pypkg/src/openbt/include/eigen3/`` — Eigen headers installed
   under the package prefix as a side effect of Eigen's own Meson install
@@ -275,10 +202,10 @@ Caching
 There are four caching layers involved in the build, each with different
 behaviour on a recompile:
 
-* ``subprojects/packagecache/`` — Stores downloaded Eigen tarballs
-  (``eigen-5.0.1.tar.bz2`` and its patch) so that Meson does not re-download
-  them on every build.  ``--clearcache`` does not clear this directory; it
-  persists intentionally across builds.
+* ``subprojects/packagecache/`` — Stores the downloaded Eigen tarball and its
+  patch so that Meson does not re-download them on every build.
+  ``--clearcache`` does not clear this directory; it persists intentionally
+  across builds.
 
 * ``cpp/builddir/`` — Ninja's compile cache of object files.  Because
   ``meson setup --wipe`` is run on every ``pip install``, this cache is never

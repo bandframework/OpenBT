@@ -67,9 +67,9 @@ Python Package Testing
 ~~~~~~~~~~~~~~~~~~~~~~
 
 * **Test OpenBT Python Source Distribution** — The primary test action.  Builds
-  a Python source distribution and tests it across a matrix of six operating
-  systems, two MPI implementations (Open MPI and MPICH), and five Python
-  versions (3.10–3.14).  The built source distribution is also uploaded as an
+  a Python source distribution and tests it across a matrix of operating
+  systems, MPI implementations, and Python versions to validate broad
+  compatibility.  The built source distribution is also uploaded as an
   artifact for manual upload to PyPI at release time.  This action additionally
   runs on published releases.
 
@@ -79,7 +79,7 @@ Python Package Testing
   MPI implementations work correctly.
 
 * **Test OpenBT in Anaconda** — Tests installation inside a conda environment
-  across six operating systems using a prebuilt Open MPI installed |via| |pip|.
+  across a matrix of operating systems using a prebuilt Open MPI installed |via| |pip|.
 
 * **Measure OpenBT Python Coverage** — Runs the full Python test suite with
   coverage measurement using |tox| and uploads the raw coverage file, XML
@@ -89,7 +89,6 @@ C++ Tools Testing
 ~~~~~~~~~~~~~~~~~
 
 * **Test OpenBT C++ Command Line Tools** — Builds and tests the C++ command
-  line tools directly across a matrix of six operating systems and two MPI
-  implementations, independently of the Python package.  Prints dynamic library
+  line tools directly across a matrix of operating systems and MPI implementations, independently of the Python package.  Prints dynamic library
   linkage information for each built binary so that developers can verify the
   correct MPI implementation was linked.
