@@ -21,7 +21,7 @@ Now install ``Ropenbt`` directly from the codebase:
 
 .. code-block:: r
 
-    remotes::install_github(“https://github.com/bandframework/OpenBT”, subdir=”Ropenbt”)
+    remotes::install_github('https://github.com/bandframework/OpenBT', subdir='Ropenbt')
 
 Note that some ``Ropenbt`` package dependencies may also be installed. Since
 ``Ropenbt`` itself needs no compilation, this step is quick regardless of
