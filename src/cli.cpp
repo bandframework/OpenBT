@@ -703,6 +703,14 @@ if(modeltype!=MODEL_MIXBART){
    std::vector<std::vector<double> > stheta(nd*mh, std::vector<double>(1));
    brtMethodWrapper fambm(&brt::f,ambm);
    brtMethodWrapper fpsbm(&brt::f,psbm);
+   std::vector<double> Cookd_mean(di.n,0.0);
+   std::vector<double> Cookd_mean_temp(di.n,0.0);
+   std::vector<double> Cookd_max(di.n,0.0);
+   std::vector<double> Cookd_max_temp(di.n,0.0);
+   std::vector<double> KLinfl(di.n,0.0);
+   std::vector<double> KLinfl_temp(di.n,0.0);
+   std::vector<double> CPOinfl(di.n,0.0);
+   std::vector<double> CPOinfl_temp(di.n,0.0);
 
 #ifdef _OPENMPI
    double tstart=0.0,tend=0.0;
@@ -817,6 +825,30 @@ if(modeltype!=MODEL_MIXBART){
          }
       }
 
+      //Calculate Cook's distance and KL divergence influence metric
+      ambm.cookdinfl(Cookd_mean_temp,Cookd_max_temp,disig.y);
+      ambm.kldivinfl(KLinfl_temp,disig.y);
+      ambm.cpoinfl(CPOinfl_temp,disig.y);
+      for(size_t j=0;j<di.n;j++) {
+         Cookd_mean[j] += Cookd_mean_temp[j]/((double) nd);
+         Cookd_max[j] += Cookd_max_temp[j]/((double) nd);
+
+         if(KLinfl_temp[j] == std::numeric_limits<double>::infinity()) {
+            KLinfl[j]=std::numeric_limits<double>::infinity();
+         }
+         else if(KLinfl[j] != std::numeric_limits<double>::infinity()) {
+            KLinfl[j] += KLinfl_temp[j]/((double) nd);
+         }
+
+         if(CPOinfl_temp[j] == std::numeric_limits<double>::infinity()) {
+            CPOinfl[j]=std::numeric_limits<double>::infinity();
+         }
+         else if(CPOinfl[j] != std::numeric_limits<double>::infinity()) {
+            CPOinfl[j] += CPOinfl_temp[j]/((double) nd);
+         }
+      }
+
+
       //save tree to vec format
       if(mpirank==0) {
          ambm.savetree(i,m,onn,oid,ovar,oc,otheta);
@@ -829,6 +861,17 @@ if(modeltype!=MODEL_MIXBART){
       cout << "Training time was " << (tend-tstart)/60.0 << " minutes." << endl;
    }
 #endif
+
+   // Finalize KLinfl and write out to files.
+   if(mpirank>0) {
+      for(size_t j=0;j<di.n;j++) CPOinfl[j] = std::log(CPOinfl[j]);
+      for(size_t j=0;j<di.n;j++) KLinfl[j] = KLinfl[j] + CPOinfl[j];
+
+      std::ofstream omf(folder + modelname + ".influence" + std::to_string(mpirank));
+      for(size_t j=0;j<di.n;j++) 
+         omf << std::scientific << Cookd_mean[j] << " " << std::scientific << Cookd_max[j] << " " << std::scientific << KLinfl[j] << " " << std::scientific << CPOinfl[j] << endl;
+      omf.close();
+   }
 
    //Flatten posterior trees to a few (very long) vectors so we can just pass pointers
    //to these vectors back to R (which is much much faster than copying all the data back).

@@ -8,6 +8,7 @@
 #include <fstream>
 #include <vector>
 #include <limits>
+#include <chrono>
 
 #include "crn.h"
 #include "tree.h"
@@ -34,6 +35,13 @@ int main(int argc, char* argv[])
       folder=std::string(argv[1]);
       folder=folder+"/";
    }
+
+   //-----------------------------------------------------------
+   //random number generation
+   crn gen;
+   gen.set_seed(static_cast<long long>(std::chrono::high_resolution_clock::now()
+                                   .time_since_epoch()
+                                   .count()));
 
    //--------------------------------------------------
    //process args
@@ -241,6 +249,7 @@ int main(int argc, char* argv[])
 
    //objects where we'll store the realizations
    std::vector<std::vector<double> > Sidraws(rnd,std::vector<double>(p));
+   std::vector<std::vector<double> > Shidraws(rnd,std::vector<double>(p));
    std::vector<std::vector<double> > Sijdraws(rnd,std::vector<double>(p*(p-1)/2));
    std::vector<std::vector<double> > TSidraws(rnd,std::vector<double>(p));
    std::vector<double> V(rnd);
@@ -291,7 +300,7 @@ int main(int argc, char* argv[])
 
       // Calculate Sobol Indices
       if(i>=snd && i<end) {
-         ambm.sobol(Sidraws[ii], Sijdraws[ii], TSidraws[ii], V[ii], minx, maxx, p);  //calculate Sobol indices (unnormalized)
+         ambm.sobol(Sidraws[ii], Sijdraws[ii], TSidraws[ii], Shidraws[ii], V[ii], minx, maxx, p, gen);  //calculate Sobol indices (unnormalized)
          ii++;
       }
    }
@@ -349,6 +358,8 @@ int main(int argc, char* argv[])
    for(size_t i=0;i<rnd;i++) {
       for(size_t j=0;j<p;j++)
          omf << std::scientific << Sidraws[i][j] << " ";
+      // for(size_t j=0;j<p;j++)
+      //    omf << std::scientific << Shidraws[i][j] << " ";
       for(size_t j=0;j<Sijdraws[i].size();j++)
          omf << std::scientific << Sijdraws[i][j] << " ";
       for(size_t j=0;j<p;j++)
@@ -357,6 +368,17 @@ int main(int argc, char* argv[])
       omf << endl;
    }
    omf.close();
+
+   if(mpirank==0) cout << endl << "Saving Shapley indices...";
+
+   std::ofstream omf2(folder + modelname + ".shapley" + std::to_string(mpirank));
+   for(size_t i=0;i<rnd;i++) {
+      for(size_t j=0;j<p;j++)
+         omf2 << std::scientific << Shidraws[i][j] << " ";
+      omf2 << endl;
+   }
+   omf2.close();
+
 
    if(mpirank==0) cout << " done." << endl;
 

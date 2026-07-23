@@ -55,12 +55,23 @@ public:
    void collapseensemble();
 
    // function for calculating Sobol-based variable activity indices
-   void sobol(std::vector<double>& Si, std::vector<double>&Sij, std::vector<double>& TSi, double& V, std::vector<double>& minx, std::vector<double>& maxx, size_t p);
+   void sobol(std::vector<double>& Si, std::vector<double>&Sij, std::vector<double>& TSi, std::vector<double>& Shi, double& V, std::vector<double>& minx, std::vector<double>& maxx, size_t p, rn& gen);
 
    // function for converting an ensemble to vector hyperrectangle format, needed for Pareto Front multiobjective optimization (see mopareto.cpp)
    void ens2rects(std::vector<std::vector<double> >& asol, std::vector<std::vector<double> >& bsol, 
                   std::vector<double>& thetasol, std::vector<double>& minx,
                   std::vector<double>& maxx, size_t p);
+
+   // function to extract hyperrectangle from bottom nodes associated with influential observation y_d(x_d)
+   void inflrect(double* xd, std::vector<double>& asol, std::vector<double>& bsol, 
+                  std::vector<double>& minx, std::vector<double>& maxx, size_t p);
+   // function to extract the 'union' hyperrectangle from bottom nodes associated with influential observation y_d(x_d)
+   void influnionrect(double* xd, std::vector<double>& asol, std::vector<double>&bsol,
+                  std::vector<double>& minx, std::vector<double>& maxx, size_t p);
+
+   void cookdinfl(std::vector<double>& cdinflmean, std::vector<double>& cdinflmax, double* sigma); //Cook's distance
+   void kldivinfl(std::vector<double>& klinfl, double* sigma); //KL-divergence based influence metric
+   void cpoinfl(std::vector<double>& cpoinfl, double* sigma); //CPO^-1 based influence metric
 
    //--------------------
    //data
