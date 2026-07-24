@@ -91,6 +91,33 @@ and build system defined at the root of the repository.  Therefore, for example,
 all intermediate and cached issues associated with the base folder also exist
 for package builds.
 
+Editable Python package installations install build products, such as the
+command line tools, directly in a developer's clone rather than inside the
+Python execution environment (|eg| within the ``site-packages`` folder of a
+virtual environment).  These cached files,  which can occasionally cause issues,
+are
+
+* ``openbt_pypkg/src/openbt/{bin,include,lib}/`` — The install destination
+  populated by ``meson install``.  This is the most problematic caching layer:
+  ``meson install`` overlays new files onto these directories but never removes
+  stale ones.  If a binary is renamed, a tool is removed from the build, or
+  Eigen headers change, the old files persist silently.  Consider deleting these
+  if the build produces unexpected behaviour.  Note that, of these contents,
+  only a subset of the command line tools in ``bin`` is included in a package
+  build.  See ``meson.build`` for the current list of built tools.
+
+* ``openbt_pypkg/src/openbt/include/eigen3/`` — Eigen headers installed
+  under the package prefix as a side effect of Eigen's own Meson install step,
+  regardless of whether Eigen came from the system or the bundled
+  ``subprojects/eigen.wrap``.  These files are unimportant once the command
+  line tools are built and are not included in package distributions.
+
+* ``openbt_pypkg/src/openbt/lib/pkgconfig/eigen3.pc`` — A ``pkg-config``
+  file for the installed Eigen, with its ``prefix`` pointing into
+  ``src/openbt/``, that is installed as a side effect.  This file is unimportant
+  and is not included in package distributions.
+
+
 Tox
 ---
 .. _tox setup: https://tox.wiki/en/latest/index.html
@@ -204,27 +231,6 @@ time:
 
 Caching
 ~~~~~~~
-Tox tasks that build the |openbt| package in editable mode install build
-products, such as the command line tools, directly in a developer's clone rather
-than caching them inside the task's ``openbt_pypkg/.tox/<task>`` folder.  These
-cached files,  which can occasionally cause issues, are
-
-* ``openbt_pypkg/src/openbt/{bin,include,lib}/`` — The install destination
-  populated by ``meson install``.  This is the most problematic caching layer:
-  ``meson install`` overlays new files onto these directories but never removes
-  stale ones.  If a binary is renamed, a tool is removed from the build, or
-  Eigen headers change, the old files persist silently.  Consider deleting these
-  if the build produces unexpected behaviour.  Note that, of these contents,
-  only a subset of the command line tools in ``bin`` is included in a package
-  build.  See ``meson.build`` for the current list of built tools.
-
-* ``openbt_pypkg/src/openbt/include/eigen3/`` — Eigen headers installed
-  under the package prefix as a side effect of Eigen's own Meson install step,
-  regardless of whether Eigen came from the system or the bundled
-  ``subprojects/eigen.wrap``.  These files are uninmportant once the command
-  line tools are built and are not included in package distributions.
-
-* ``openbt_pypkg/src/openbt/lib/pkgconfig/eigen3.pc`` — A ``pkg-config``
-  file for the installed Eigen, with its ``prefix`` pointing into
-  ``src/openbt/``, that is installed as a side effect.  This file is unimportant
-  and is not included in package distributions.
+As noted above, some |tox| tasks build the |openbt| package in editable mode.
+They, therefore, can suffer from the potential caching issues mentioned above
+for direct editable installations of the package.

@@ -67,7 +67,7 @@ Documentation
 Python Package Testing
 ~~~~~~~~~~~~~~~~~~~~~~
 
-* **Test |openbt| Python Source Distribution** — The primary test action.  Builds
+* **Test** |openbt| **Python Source Distribution** — The primary test action.  Builds
   a Python source distribution and tests it across a matrix of operating
   systems, MPI implementations, and Python versions to validate broad
   compatibility.  This action additionally runs on published releases so that
@@ -75,23 +75,23 @@ Python Package Testing
   artifact, can be manually uploaded to PyPI as the official release
   distribution.
 
-* **Test |openbt| Developer-mode Installation** — Tests the editable installation
+* **Test** |openbt| **Developer-mode Installation** — Tests the editable installation
   (``pip install -e .``) on a reduced matrix.  MPI is intentionally installed
   |via| |pip| rather than a system package manager to confirm that pip-installed
   MPI implementations work correctly.
 
-* **Test |openbt| in Anaconda** — Tests installation inside a conda environment
+* **Test** |openbt| **in Anaconda** — Tests installation inside a conda environment
   across a matrix of operating systems and installs |via| |pip| a prebuilt
   Open MPI installation included in a Python package.
 
-* **Measure |openbt| Python Coverage** — Runs the full Python test suite with
+* **Measure** |openbt| **Python Coverage** — Runs the full Python test suite with
   coverage measurement using |tox| and uploads the raw coverage file, XML
   report, and HTML report as artifacts.
 
 C++ Tools Testing
 ~~~~~~~~~~~~~~~~~
 
-* **Test |openbt| C++ Command Line Tools** — Builds and tests the C++ command
+* **Test** |openbt| **C++ Command Line Tools** — Builds and tests the C++ command
   line tools directly across a matrix of operating systems and MPI implementations, independently of the Python package.  Prints dynamic library
   linkage information for each built binary so that developers can verify the
   correct MPI implementation was linked.
