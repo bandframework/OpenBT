@@ -27,7 +27,7 @@ it can be built with MPI installed on a laptop using the system's package
 manager or with MPI installations on leadership class platforms and clusters
 that were installed by experts and optimized for their specific platform.
 
-This repository was established by merging the contents of the original Bitbucket
+This project was established by merging the contents of the original Bitbucket
 `OpenBT repository`_ with the `OpenBTMixing repository`_, which was based off of
 the former.  It, therefore, will supersede those two repositories, which will be
 frozen.
