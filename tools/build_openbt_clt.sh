@@ -12,6 +12,24 @@
 # This script returns exit codes that should make it compatible with use in CI
 # build processes.
 #
+# Intermediate & cached files
+# ---------------------------
+# This script has Meson create and use the /path/to/OpenBT/builddir folder for
+# the build.  Developers can use this script to create that folder and then use
+# Meson manually with that folder to develop and test the code.  Users could
+# similarly use the contents of the script to guide custom builds.  The Meson
+# setup, compile, and install commands in the script might provide a good
+# starting point for such efforts.
+#
+# While the /path/to/OpenBT/subprojects folder does contain necessary files
+# under version control, it can also contain cached third-party dependencies
+# such as Eigen's source code.  The subprojects/packagecache folder can also
+# contain cached files such as third-party dependence tarballs and patches.
+# Please note that setting up the Meson build directory with the --clearcache
+# flag does **not** remove such files.  Rather, they intentionally persist
+# across builds.  Consider reviewing those contents if Meson uses Eigen versions
+# or installations different from those intended.
+#
 
 #####----- HARDCODED VALUES
 use_mpi=true
