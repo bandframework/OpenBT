@@ -2,9 +2,10 @@ Examples
 ========
 .. _Branin: https://www.sfu.ca/~ssurjano/branin.html
 
-To use |openbt| in R, install the ``Ropenbt`` front-end R interface as
-described in :doc:`get_started_r`, then let's create a test function. A
-popular one is the Branin_ function:
+To use |openbt| in R, install ``Ropenbt`` as described in :doc:`get_started_r`.
+This example assumes that the command line tools were built with MPI support.
+
+Let's create a test function. A popular one is the Branin_ function:
 
 .. code-block:: r
 
@@ -25,7 +26,7 @@ popular one is the Branin_ function:
     }
 
 
-    # Simulate branin data for testing
+    # Simulate Branin data for testing
     set.seed(99)
     n=500
     p=2
@@ -34,7 +35,7 @@ popular one is the Branin_ function:
     for(i in 1:n) y[i] = braninsc(x[i,])
 
 And then we can load the ``Ropenbt`` package and fit a BART model. Here we set
-the model type as ``model="bart"`` which ensures we fit a homoscedastic BART
+the model type as ``model="bart"``, which ensures that we fit a homoscedastic BART
 model. The number of MPI threads to use is specified as ``tc=4``. For a list
 of all optional parameters, see ``args(openbt)``.
 
@@ -85,13 +86,8 @@ A more accurate alternative is to calculate the Sobol' indices.
 
 .. code-block:: r
 
-    # Calculate Sobol indices
+    # Calculate Sobol' indices
     fits=sobol.openbt(fit2)
     fits$msi
     fits$mtsi
     fits$msij
-
-The ``Ropenbt`` package does not currently ship a dedicated automated test
-suite of its own; the steps above (fitting the Branin function and checking
-that predictions track the observed values) are a reasonable smoke test that
-your installation is working end to end.

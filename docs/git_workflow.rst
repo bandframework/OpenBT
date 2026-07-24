@@ -1,7 +1,5 @@
 Git Workflow
 ============
-Since we are currently standing this repository up, we are working with an
-informal git workflow.  A minimal set of rules are
 
 .. note::
 
@@ -9,6 +7,9 @@ informal git workflow.  A minimal set of rules are
    web interface, do **not** resolve the conflicts through the web interface,
    which might result in unwanted side effects.  Rather, a gatekeeper should
    resolve the conflicts in a local clone, merge locally, and push.
+
+Since we are currently standing this repository up, we are working with an
+informal git workflow.  A minimal set of rules are
 
 #. No one should make direct commits to the ``main`` branch.
 #. Each addition and change should be made on a dedicated feature branch that is
@@ -66,29 +67,31 @@ Documentation
 Python Package Testing
 ~~~~~~~~~~~~~~~~~~~~~~
 
-* **Test OpenBT Python Source Distribution** — The primary test action.  Builds
+* **Test |openbt| Python Source Distribution** — The primary test action.  Builds
   a Python source distribution and tests it across a matrix of operating
   systems, MPI implementations, and Python versions to validate broad
-  compatibility.  The built source distribution is also uploaded as an
-  artifact for manual upload to PyPI at release time.  This action additionally
-  runs on published releases.
+  compatibility.  This action additionally runs on published releases so that
+  the source distribution built and tested by the action, which is stored as an
+  artifact, can be manually uploaded to PyPI as the official release
+  distribution.
 
-* **Test OpenBT Developer-mode Installation** — Tests the editable installation
+* **Test |openbt| Developer-mode Installation** — Tests the editable installation
   (``pip install -e .``) on a reduced matrix.  MPI is intentionally installed
   |via| |pip| rather than a system package manager to confirm that pip-installed
   MPI implementations work correctly.
 
-* **Test OpenBT in Anaconda** — Tests installation inside a conda environment
-  across a matrix of operating systems using a prebuilt Open MPI installed |via| |pip|.
+* **Test |openbt| in Anaconda** — Tests installation inside a conda environment
+  across a matrix of operating systems and installs |via| |pip| a prebuilt
+  Open MPI installation included in a Python package.
 
-* **Measure OpenBT Python Coverage** — Runs the full Python test suite with
+* **Measure |openbt| Python Coverage** — Runs the full Python test suite with
   coverage measurement using |tox| and uploads the raw coverage file, XML
   report, and HTML report as artifacts.
 
 C++ Tools Testing
 ~~~~~~~~~~~~~~~~~
 
-* **Test OpenBT C++ Command Line Tools** — Builds and tests the C++ command
+* **Test |openbt| C++ Command Line Tools** — Builds and tests the C++ command
   line tools directly across a matrix of operating systems and MPI implementations, independently of the Python package.  Prints dynamic library
   linkage information for each built binary so that developers can verify the
   correct MPI implementation was linked.
