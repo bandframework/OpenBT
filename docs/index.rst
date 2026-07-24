@@ -3,10 +3,8 @@ Welcome to |openbt|'s Documentation!
 .. _Open MPI: https://www.open-mpi.org
 .. _MPICH: https://www.mpich.org
 .. _framework: https://bandframework.github.io
-.. _Issue 35: https://github.com/bandframework/OpenBT/issues/35
 .. _OpenBT repository: https://bitbucket.org/mpratola/openbt/src/master
 .. _OpenBTMixing repository: https://github.com/jcyannotty/OpenBT
-
 
 .. image:: images/openbt_logo_rect.png
     :align: center
@@ -37,18 +35,12 @@ frozen.
 This repository and its contents are being established and developed as part of
 |band| framework_.
 
-.. note::
-    While an R wrapper does exist for the original |openbt| and |openbtmixing|
-    repositories, that functionality has not yet been included in this new,
-    combined repository (`Issue 35`_).
-
 .. toctree::
    :numbered:
    :maxdepth: 1
    :caption: C++ User Guide:
 
    get_started_cpp
-   bibliography_cpp
 
 .. toctree::
    :numbered:
@@ -75,6 +67,6 @@ This repository and its contents are being established and developed as part of
    contributing
    git_workflow
    documentation
-   tox_usage
+   developer_environment
    versioning
    release_procedure
