@@ -44,8 +44,8 @@ ninja_ backend to compile the C++ command line tools during installation.
 Please refer to the relevant installation instructions to determine if manual
 installation of these tools is required for a particular task.
 
-Please refer to the documentation in ``tools/build_openbt_clt.sh`` script for
-information about using that script, for an example of how to configure and use
+Please refer to the documentation in ``tools/build_openbt_clt.sh`` for
+information about using that tool, for an example of how to configure and use
 the Meson build system, and for potential build difficulties (|eg| due to
 intermediate and cached files).
 
@@ -183,7 +183,7 @@ report,coverage``). Users needing ``pdf`` should note that |tox| does not
 install ``make`` or a LaTeX distribution; those must be installed separately.
 
 The |tox| tool caches all of its virtual environments in ``openbt_pypkg/.tox/``.
-Running ``tox -r <task>`` forces a clean environment rebuild including
+Running ``tox -r -e <task>`` forces a clean environment rebuild including
 installation of (potentially more modern) dependencies and a full package build
 from scratch.  Happily, developers can activate and work directly in |tox|'s
 cached virtual environments.
@@ -194,7 +194,7 @@ Direct use of |tox| virtual environments
 Many of the |tox| tasks will build the |openbt| binary automatically each time
 they are run, which can significantly slow development work.  In such cases,
 developer productivity can benefit from creating a clean virtual environment for
-their task using ``tox -r <task>`` and subsequently loading and working in that
+their task using ``tox -r -e <task>`` and subsequently loading and working in that
 virtual environment directly.
 
 Developers can inspect ``tox.ini`` to see what commands are run by their task
@@ -211,7 +211,7 @@ The following example shows how to run only a single test case using the
     $ which python
     $ python --version
     $ python -m pip list
-    $ python -m pytest openbt.tests.test_brt
+    $ python -m pytest --pyargs openbt.tests.test_mixing
 
 Note that using the ``coverage`` virtual environment directly can be
 particularly useful since the package is installed in editable mode and
