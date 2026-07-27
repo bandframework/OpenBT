@@ -2,6 +2,11 @@ Getting Started with Python
 ===========================
 .. _Meson: https://mesonbuild.com
 .. _ninja: https://ninja-build.org
+.. _Issue 53: https://github.com/bandframework/OpenBT/issues/53
+
+.. note::
+    While the Python package presently offers only mixing functionality, the
+    standard regression functionality will be made available (`Issue 53`_).
 
 Installed versions of the |openbt| Python package contain and wrap a dedicated
 set of |openbt| C++ command line tools.  In particular, the package is

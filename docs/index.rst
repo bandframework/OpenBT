@@ -5,6 +5,7 @@ Welcome to |openbt|'s Documentation!
 .. _framework: https://bandframework.github.io
 .. _OpenBT repository: https://bitbucket.org/mpratola/openbt/src/master
 .. _OpenBTMixing repository: https://github.com/jcyannotty/OpenBT
+.. _Taweret: https://taweretdocs.readthedocs.io
 
 .. image:: images/openbt_logo_rect.png
     :align: center
@@ -33,7 +34,9 @@ the former.  It, therefore, will supersede those two repositories, which will be
 frozen.
 
 This repository and its contents are being established and developed as part of
-|band| framework_.
+the |band| framework_.  In particular, OpenBTMixing was originally built in
+conjunction with Taweret_, and the |openbt| Python package provides mixing
+functionality for Taweret.
 
 .. toctree::
    :numbered:

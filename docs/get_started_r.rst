@@ -1,6 +1,11 @@
 Getting Started with R
 =======================
 .. _remotes: https://remotes.r-lib.org
+.. _Issue 52: https://github.com/bandframework/OpenBT/issues/52
+
+.. note::
+    While the R package presently offers only regression functionality, mixing
+    functionality will be made available (`Issue 52`_).
 
 Installed versions of the |openbt| R package, ``Ropenbt``, provide a front-end R
 interface that wraps a dedicated set of |openbt| C++ command line tools.  The
