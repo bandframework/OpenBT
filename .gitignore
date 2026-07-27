@@ -34,6 +34,9 @@ openbt_pypkg/coverage.xml
 openbt_pypkg/htmlcov
 openbt_pypkg/src/openbt.egg-info
 openbt_pypkg/src/openbt/_version.py
+openbt_pypkg/src/openbt/include/
+openbt_pypkg/src/openbt/lib/
+
 
 # Other files
 .DS_Store
