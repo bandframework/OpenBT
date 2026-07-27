@@ -50,13 +50,13 @@ All of the following actions run automatically on every push and pull request to
 Documentation
 ~~~~~~~~~~~~~
 
-* **Check Spelling** — Checks all ``.rst`` and ``.md`` files in the repository
+* **Check Spelling** — Checks all files in the repository
   for typographic errors using the ``typos`` tool with the ``typos.toml``
   configuration file.
 
 * **Check Links** — Checks all ``.rst`` and ``.md`` files for broken URLs using
   the ``lychee`` tool.  In addition to running on push and pull request, this
-  action runs on a weekly schedule to catch links that break between
+  action runs on a regular schedule to catch links that break between
   contributions.
 
 * **Build Sphinx Docs** — Builds the |openbt| documentation in both HTML and

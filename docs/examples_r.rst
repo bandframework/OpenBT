@@ -36,7 +36,7 @@ Let's create a test function. A popular one is the Branin_ function:
 
 And then we can load the ``Ropenbt`` package and fit a BART model. Here we set
 the model type as ``model="bart"``, which ensures that we fit a homoscedastic BART
-model. The number of MPI threads to use is specified as ``tc=4``. For a list
+model. The number of MPI processes to use is specified as ``tc=4``. For a list
 of all optional parameters, see ``args(openbt)``.
 
 .. code-block:: r
