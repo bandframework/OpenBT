@@ -67,12 +67,17 @@ prefer to use Conda should proceed with extra caution.
 
 Install from PyPI
 -----------------
-.. _project : https://pypi.org/project/openbt
+.. _PyPI: https://pypi.org/project/openbt
 
-This |openbt| Python package is **not** currently distributed on PyPI since a
-PyPI |openbt| project_ already exists.  That PyPI project space will eventually
-be transferred to this project so that distribution of this package will be
-enabled by PyPI under the name ``openbt``.
+The |openbt| Python package is available for installation |via| PyPI_.  It can
+be installed by setting up a terminal with the desired target Python and
+executing
+
+.. code:: console
+
+    python -m pip install openbt
+
+The modern version of this package was first established at ``v1.2.0``.
 
 Install from clone
 ------------------
