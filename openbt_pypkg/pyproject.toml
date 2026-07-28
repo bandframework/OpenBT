@@ -13,7 +13,8 @@
 # custom configurations
 #                https://setuptools-scm.readthedocs.io
 #
-# Meson version limit required to get necessary acceptable MPI external
+# Meson version limit, which likely needs to be maintained consistent with limits
+# in meson.build, required to get necessary acceptable MPI external
 # dependendence functionality.
 #             https://github.com/mesonbuild/meson/pull/13619
 requires = [

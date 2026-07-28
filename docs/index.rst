@@ -1,9 +1,10 @@
 Welcome to |openbt|'s Documentation!
 ====================================
+.. _GitHub repository: https://github.com/bandframework/OpenBT
 .. _Open MPI: https://www.open-mpi.org
 .. _MPICH: https://www.mpich.org
 .. _framework: https://bandframework.github.io
-.. _OpenBT repository: https://bitbucket.org/mpratola/openbt/src/master
+.. _original Bitbucket OpenBT repository: https://bitbucket.org/mpratola/openbt/src/master
 .. _OpenBTMixing repository: https://github.com/jcyannotty/OpenBT
 .. _Taweret: https://taweretdocs.readthedocs.io
 
@@ -13,7 +14,7 @@ Welcome to |openbt|'s Documentation!
     :height: 165
     :width: 451
 
-|openbt| is an extensible software project that implements a variety of Bayesian tree models for scientific and industry applications, including regression, model mixing, sensitivity analysis and multiobjective optimization.  
+|openbt| is an extensible software project managed in a `GitHub repository`_ that implements a variety of Bayesian tree models for scientific and industry applications, including regression, model mixing, sensitivity analysis and multiobjective optimization.  
 
 The heart of |openbt| is a set of C++ tools that can be used directly |via| the
 command line or indirectly through the ``openbt`` Python package or ``RopenBT`` R package, which wrap
@@ -28,8 +29,8 @@ it can be built with MPI installed on a laptop using the system's package
 manager or with MPI installations on leadership class platforms and clusters
 that were installed by experts and optimized for their specific platform.
 
-This project was established by merging the contents of the original Bitbucket
-`OpenBT repository`_ with the `OpenBTMixing repository`_, which was based off of
+This project was established by merging the contents of the `original Bitbucket
+OpenBT repository`_ with the `OpenBTMixing repository`_, which was based off of
 the former.  It, therefore, will supersede those two repositories, which will be
 frozen.
 

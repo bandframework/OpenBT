@@ -96,7 +96,7 @@ The package can be installed in developer/editable mode by executing
     $ cd /path/to/OpenBT/openbt_pypkg
     $ python -m pip install -v -e .
 
-In this latter case, the command line tools are built automatically and
+In this latter case, a full set of the command line tools is built automatically and
 installed at ``/path/to/OpenBT/openbt_pypkg/src/openbt/bin``.
 
 Testing

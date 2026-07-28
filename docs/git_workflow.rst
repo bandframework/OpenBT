@@ -1,9 +1,12 @@
+Git Usage
+=========
+
 Git Workflow
-============
+------------
 
 .. note::
 
-   If merge conflicts exist that block the merging of the PR through the GitHub
+   If merge conflicts exist that block the merging of a PR through the GitHub
    web interface, do **not** resolve the conflicts through the web interface,
    which might result in unwanted side effects.  Rather, a gatekeeper should
    resolve the conflicts in a local clone, merge locally, and push.
@@ -23,13 +26,15 @@ informal git workflow.  A minimal set of rules are
    commits to the main repository.  Ownership of the branch should be handed
    over to another developer by explicit communication only.
 #. Do not create branches off of other feature branches.
-#. If the contents of a feature branch are deemed as good and ready for
+#. If the contents of a feature branch are deemed good and ready for
    inclusion in the software, the branch's developer should create a PR for
    merging the feature branch into ``main``.
 #. If a PR is ready for review, the developer should first merge ``main`` into
    the feature branch if ``main`` has been updated since the feature branch was
    based off of it.  This forces the integration of the new work in ``main`` to
    occur in the feature branch rather than in ``main``, which we try to protect.
+   Similarly, all merge conflict resolution occurs as subsequent commits on the
+   feature branch rather than on ``main``.
 #. If a PR is ready for review and synchronized with ``main``, the branch
    developer should perform a self-review of the PR.  Once completed, the PR
    must undergo a review by a different developer that is also a gatekeeper of
@@ -41,11 +46,15 @@ informal git workflow.  A minimal set of rules are
 Developers are encouraged to create PRs early during branch development to begin
 and record a dialogue with potential reviewers in the PR.
 
+While its up to the reviewers' discretion to determine what indicates a
+successful PR, typically merges should only proceed after confirming that all
+GitHub actions are passing on the latest commit of the feature branch.
+
 GitHub Actions
 --------------
 
 All of the following actions run automatically on every push and pull request to
-``main``.  A merge should only proceed once all actions pass.
+``main``.
 
 Documentation
 ~~~~~~~~~~~~~
@@ -76,9 +85,9 @@ Python Package Testing
   artifact, can be manually uploaded to PyPI as the official release
   distribution.
 
-* **Test** |openbt| **Developer-mode Installation** — Tests the editable installation
+* **Test** |openbt| **Developer-mode Installation** — Tests editable installations
   (``pip install -e .``) on a reduced matrix.  MPI is intentionally installed
-  |via| |pip| rather than a system package manager to confirm that pip-installed
+  |via| |pip| rather than a system package manager to confirm that |pip|-installed
   MPI implementations work correctly.
 
 * **Test** |openbt| **in Anaconda** — Tests installation inside a conda environment

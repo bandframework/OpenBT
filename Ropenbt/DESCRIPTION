@@ -2,7 +2,7 @@ Package: Ropenbt
 Type: Package
 Title: The Open Bayesian Trees Project
 Version: 1.2.0
-Date: 2026-07-09
+Date: 2026-07-29
 Authors@R: c(person('Matthew', 'Pratola', role=c('aut','cre','cph'),email='mpratola@iu.edu'))
 URL: http://www.github.com/bandframework/OpenBT
 Description: 
