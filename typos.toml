@@ -1,6 +1,6 @@
 [files]
 extend-exclude = [".git",
-                  "misc", "R",
+                  "Ropenbt",
                   "includes", "src", "tests",
                   "openbt_pypkg/src/openbt/include"]
 ignore-hidden = false
