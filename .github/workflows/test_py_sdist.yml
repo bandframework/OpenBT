@@ -73,6 +73,9 @@ jobs:
           #
           # Next testing steps would be to build a minimal MPI program and see
           # if I can reproduce the issue.
+          #
+          # TODO: The C++ CLTs action successfully runs with this setup.  Note
+          # that it doesn't load libmpich-dev.
           - os: ubuntu-24.04
             mpi_impl: "mpich"
 

@@ -50,12 +50,13 @@ All of the following actions run automatically on every push and pull request to
 Documentation
 ~~~~~~~~~~~~~
 
-* **Check Spelling** — Checks all files in the repository
+* **Check Spelling** — Checks a (potentially proper) subset of files in the repository
   for typographic errors using the ``typos`` tool with the ``typos.toml``
-  configuration file.
+  configuration file.  Refer to the configuration to determine what files are
+  being checked.
 
 * **Check Links** — Checks all ``.rst`` and ``.md`` files for broken URLs using
-  the ``lychee`` tool.  In addition to running on push and pull request, this
+  the ``lychee`` tool.  In addition to running on pushes and pull requests, this
   action runs on a regular schedule to catch links that break between
   contributions.
 
@@ -94,4 +95,5 @@ C++ Tools Testing
 * **Test** |openbt| **C++ Command Line Tools** — Builds and tests the C++ command
   line tools directly across a matrix of operating systems and MPI implementations, independently of the Python package.  Prints dynamic library
   linkage information for each built binary so that developers can verify the
-  correct MPI implementation was linked.
+  correct MPI implementation was linked.  Since this action uses the build
+  script recommended to users, it also confirms correct script functionality.
