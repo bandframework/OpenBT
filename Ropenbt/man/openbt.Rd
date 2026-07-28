@@ -6,8 +6,9 @@
   The function \code{openbt()} is the main function for fitting Bayesian Regression Tree models that are provided in the OpenBT project.  
 }
 \usage{
-openbt(x.train, y.train, ntree=NULL, ntreeh=NULL, ndpost=1000, 
-     nskip=100, k=NULL, power=2.0, base=.95, tc=2, sigmav=rep(1,length(y.train)), 
+openbt(x.train, y.train, f.train = matrix(1, nrow=length(y.train), ncol = 2), ntree=NULL,
+     ntreeh=NULL, ndpost=1000, nskip=100, k=NULL, power=2.0, base=.95, tc=2, 
+     sigmav=rep(1,length(y.train)), f.sd.train = NULL, wts.prior.info = NULL,
      fmean=mean(y.train), overallsd = NULL, overallnu=NULL, 
      chv = cor(x.train,method="spearman"), pbd=.7, pb=.5, stepwpert=.1, probchv=.1,
      minnumbot=5, printevery=100, numcut=100, xicuts=NULL, nadapt=1000, adaptevery=100,
@@ -16,6 +17,7 @@ openbt(x.train, y.train, ntree=NULL, ntreeh=NULL, ndpost=1000,
 \arguments{
   \item{x.train}{nxp matrix of predictor variables for the training data.}
   \item{y.train}{nx1 vector of the observed response for the training data.}
+  \item{f.train}{For eventual model mixing support.}
   \item{ntree}{Number of trees used for the mean model.}
   \item{ntreeh}{Number of trees used for the variance model.}
   \item{ndpost}{Number of iterations to run the MCMC algorithm after burn-in.}
@@ -25,6 +27,8 @@ openbt(x.train, y.train, ntree=NULL, ntreeh=NULL, ndpost=1000,
   \item{base}{Base parameter in the tree depth penalizing prior.}
   \item{tc}{Number of OpenMP threads to use.}
   \item{sigmav}{Initialization of square-root of variance parameter.}
+  \item{f.sd.train}{For eventual model mixing support.}
+  \item{wts.prior.info}{For eventual model mixing support.}
   \item{fmean}{Overall mean of the data for pre-centering the data before running the model.}
   \item{overallsd}{A rudimentary estimate of the process standard deviation. Used in calibrating the variance prior.}
   \item{overallnu}{Shape parameter for the variance prior.}
