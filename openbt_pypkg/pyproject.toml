@@ -15,6 +15,7 @@
 #
 # Meson version limit required to get necessary acceptable MPI external
 # dependendence functionality.
+#             https://github.com/mesonbuild/meson/pull/13619
 requires = [
     "ninja",
     "meson>=1.6.0",
