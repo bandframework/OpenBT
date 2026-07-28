@@ -44,7 +44,7 @@ PACKAGE_DATA = {
 
 PROJECT_URLS = {
     "Source": "https://github.com/bandframework/OpenBT",
-    "Documentation": "https://github.com/bandframework/OpenBT",
+    "Documentation": "https://openbt.readthedocs.io",
     "Tracker": "https://github.com/bandframework/OpenBT/issues",
 }
 
@@ -118,17 +118,17 @@ def readme_md():
 
 setup(
     name='openbt',
-    author="John Yannotty",
-    author_email="yannotty.1@buckeyemail.osu.edu",
-    maintainer="John Yannotty",
-    maintainer_email="yannotty.1@buckeyemail.osu.edu",
+    author="Matthew Pratola, John Yannotty",
+    author_email="mpratola@iu.edu",
+    maintainer="Matthew Pratola",
+    maintainer_email="mpratola@iu.edu",
     license="MIT",
     package_dir={"": "src"},
     package_data=PACKAGE_DATA,
     cmdclass=cmdclass,
     url=PROJECT_URLS["Source"],
     project_urls=PROJECT_URLS,
-    description="Model mixing using Bayesian Additive Regression Trees",
+    description="Bayesian Additive Regression Trees",
     long_description=readme_md(),
     long_description_content_type="text/markdown",
     python_requires=PYTHON_REQUIRES,

@@ -6,7 +6,7 @@ import json
 from openbt import __version__
 
 project   = 'OpenBT'
-copyright = "2025, Matthew Pratola and John Yannotty"
+copyright = "2025, Matthew T. Pratola and John Yannotty"
 author    = "Matthew Pratola and John Yannotty"
 version   = __version__
 release   = version
