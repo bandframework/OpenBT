@@ -9,11 +9,16 @@
 # All other information needed to compose the package itself is in setup.py.
 
 [build-system]
+# setuptools/_scm version limits set following setuptools_scm documentation for
+# custom configurations
+#                https://setuptools-scm.readthedocs.io
+#
+# Meson version limit required to get necessary acceptable MPI external
+# dependendence functionality.
 requires = [
-    "setuptools",
     "ninja",
     "meson>=1.6.0",
-    "setuptools_scm[toml]>=6.0"
+    "setuptools>=80", "setuptools_scm[toml]>=8"
 ]
 build-backend = "setuptools.build_meta"
 
