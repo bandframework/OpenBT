@@ -63,9 +63,9 @@ Developer Guide.
 
 ```
 @techreport{openbt2026,
-  author      = {Matthew Pratola and John Yannotty},
-  title       = {{OpenBT 1.2.0} User Guides},
-  institution = {Indiana University Bloomington},
+  author      = {Matthew T. Pratola and John C. Yannotty},
+  title       = {{OpenBT} User Guides},
+  institution = {},
   number      = {Version 1.2.0},
   year        = {2026},
   url         = {https://openbt.readthedocs.io/}
