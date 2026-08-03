@@ -118,9 +118,9 @@ def readme_md():
 
 setup(
     name='openbt',
-    author="Matthew Pratola, John Yannotty",
+    author="Matthew T. Pratola, John C. Yannotty",
     author_email="mpratola@iu.edu",
-    maintainer="Matthew Pratola",
+    maintainer="Matthew T. Pratola",
     maintainer_email="mpratola@iu.edu",
     license="MIT",
     package_dir={"": "src"},
