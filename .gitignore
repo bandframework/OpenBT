@@ -1,16 +1,8 @@
-# Text files
-!Examples/Data/2d_x_test.txt
-!Examples/Data/2d_x_train.txt
-!Examples/Data/2d_y_train.txt
-!Examples/Data/honda_x_test.txt
-!Examples/Data/honda_x_train.txt
-!Examples/Data/honda_y_train.txt
-
 # Rhistory
 .Rhistory
 
 # Python cache
-__pycache__/*
+**/__pycache__
 *.pyc
 
 # meson setup
@@ -20,7 +12,6 @@ subprojects/.wraplock
 
 # Other folders
 .vscode/*
-__pycache__
 
 # Sphinx docs
 docs/build_pdf
@@ -36,7 +27,6 @@ openbt_pypkg/src/openbt.egg-info
 openbt_pypkg/src/openbt/_version.py
 openbt_pypkg/src/openbt/include/
 openbt_pypkg/src/openbt/lib/
-
 
 # Other files
 .DS_Store

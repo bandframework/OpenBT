@@ -2,6 +2,11 @@ Getting Started with Python
 ===========================
 .. _Meson: https://mesonbuild.com
 .. _ninja: https://ninja-build.org
+.. _Issue 53: https://github.com/bandframework/OpenBT/issues/53
+
+.. note::
+    While the Python package presently offers only mixing functionality, the
+    standard regression functionality will be made available (`Issue 53`_).
 
 Installed versions of the |openbt| Python package contain and wrap a dedicated
 set of |openbt| C++ command line tools.  In particular, the package is
@@ -62,12 +67,17 @@ prefer to use Conda should proceed with extra caution.
 
 Install from PyPI
 -----------------
-.. _project : https://pypi.org/project/openbt
+.. _PyPI: https://pypi.org/project/openbt
 
-This |openbt| Python package is **not** currently distributed on PyPI since a
-PyPI |openbt| project_ already exists.  That PyPI project space will eventually
-be transferred to this project so that distribution of this package will be
-enabled by PyPI under the name ``openbt``.
+The |openbt| Python package is available for installation |via| PyPI_.  It can
+be installed by setting up a terminal with the desired target Python and
+executing
+
+.. code:: console
+
+    python -m pip install openbt
+
+The modern version of this package was first established at ``v1.2.0``.
 
 Install from clone
 ------------------
@@ -86,7 +96,7 @@ The package can be installed in developer/editable mode by executing
     $ cd /path/to/OpenBT/openbt_pypkg
     $ python -m pip install -v -e .
 
-In this latter case, the command line tools are built automatically and
+In this latter case, a full set of the command line tools is built automatically and
 installed at ``/path/to/OpenBT/openbt_pypkg/src/openbt/bin``.
 
 Testing

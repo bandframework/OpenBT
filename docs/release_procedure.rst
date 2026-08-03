@@ -41,6 +41,8 @@ Seed the release process
 
 Once all tasks have been executed
 
+* Determine if new Meson version constraints should be made and implement these
+  consistently in ``meson.build`` and ``pyproject.toml``.
 * Check if a new version of the Eigen package is available through the Meson
   build system's wrapdb facility and assess if the new version should be adopted
   and tested.
@@ -108,6 +110,13 @@ Command line tools
    tools.  This should include a review of the build logs and confirming correct
    logging of the new release version identifier.
 
+R package
+^^^^^^^^^
+The following can likely be piggybacked onto the above command line tool testing.
+
+#. Gatekeepers to follow installation guide to install and test the R
+   package in a clean environment
+
 Python package
 ^^^^^^^^^^^^^^
 .. _twine instructions: https://twine.readthedocs.io/en/stable/index.html#using-twine
@@ -152,11 +161,6 @@ Otherwise,
 #. Review the package's webpage on PyPI.
 #. In a clean virtual environment, follow the installation guide for installing
    from |pip| and to test the installation
-
-R package
-^^^^^^^^^
-#. Gatekeepers to follow installation guide to install and test the R
-   package in a clean environment
 
 Post-release actions
 --------------------

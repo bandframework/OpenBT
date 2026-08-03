@@ -75,6 +75,18 @@ an |openbt| library, and all related headers with `tools/build_openbt_clt.sh
 This script also runs the command line tool test suite and prints test results.
 Please read the documentation at the top of the script for more information.
 
+For zsh users (e.g. Mac) update the ``PATH`` variable in ``.zshrc`` using the following command (replacing /path/to/ accordingly):
+
+.. code-block:: zsh
+
+    % echo -e "# Add OpenBT to path\nexport PATH=\$PATH:/path/to/OpenBT/bin" >> ~/.zshrc
+
+For bash users (e.g. Linux) update the ``PATH`` variable in ``.bashrc`` using the following command (replacing /path/to/ accordingly):
+
+.. code-block:: bash
+
+    $ echo '# Add OpenBT to path' >> ~/.bashrc && echo 'export PATH="/path/to/OpenBT/bin:$PATH"' >> ~/.bashrc
+
 .. note::
     The state and effectiveness of the C++ command line tool test suite is under
     investigation (`Issue 7`_).

@@ -61,7 +61,7 @@ package is installed |via|
     $ cd /path/to/OpenBT/openbt_pypkg
     $ python -m pip install .
 
-or in editable mode |via|
+or installed in editable mode |via|
 
 .. code-block:: console
 
@@ -104,7 +104,8 @@ are
   Eigen headers change, the old files persist silently.  Consider deleting these
   if the build produces unexpected behaviour.  Note that, of these contents,
   only a subset of the command line tools in ``bin`` is included in a package
-  build.  See ``meson.build`` for the current list of built tools.
+  build.  See ``meson.build`` for the current list of built tools.  See
+  ``setup.py`` to determine which of these are included in the Python package.
 
 * ``openbt_pypkg/src/openbt/include/eigen3/`` — Eigen headers installed
   under the package prefix as a side effect of Eigen's own Meson install step,
