@@ -104,10 +104,12 @@ When a particular commit on ``main`` is to be deemed a release,
    action's log.
 #. Carry out all necessary checks for the different software products (see
    below).
-   * TODO: If issues are found that require a new commit, the tag can be
-     reassigned to a new commit (extra effort to force update of tag in remote
-     and for other developers to move tag in their clones as well?).  After
-     that, the release should be XYZ?
+
+.. todo::
+    If issues are found that require a new commit, the tag can be reassigned to
+    a new commit (extra effort to force update of tag in remote and for other
+    developers to move tag in their clones as well?).  After that, what needs to
+    be done to reissue the release at the updated tag?
 
 Command line tools
 ^^^^^^^^^^^^^^^^^^
