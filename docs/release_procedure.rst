@@ -71,6 +71,8 @@ Once all tasks have been executed
   * Check links
   * Confirm that main README is consistent with Python package README and
     landing page of Sphinx docs
+  * Check contents of Python package README compatible with PyPI by executing
+    `twine check <sdist.tar.gz>`.
 
 * Review all documentation associated with the repository including examples to
   determine if any updates still need to be made and address on a feature branch
@@ -92,17 +94,22 @@ When a particular commit on ``main`` is to be deemed a release,
    included in the release
 #. Perform any review of the artifacts created by the actions deemed necessary
    based on the changes included in the release
-#. Tag the release commit with the name ``vX.Y.Z`` and push.  This will trigger
-   the ``test_py_sdist`` GitHub action, which builds the source distribution
-   with the correct version identifier and tests it.
+#. Tag the release commit with the name ``vX.Y.Z`` and push.
+#. Create and publish a release with the correct tag ``vX.Y.Z`` and indicate if
+   the release included changes to the C++ command line tools, the Python
+   package, the R package, or some combination of these.  This will trigger the
+   ``test_py_sdist`` GitHub action, which builds the source distribution with
+   the correct version identifier and tests it.
 #. Confirm that the action passed with no errors or warnings.  Review the
    action's log.
-#. Create a **draft** release with the correct tag ``vX.Y.Z`` and indicate if
-   the release included changes to the C++ command line tools, the Python
-   package, the R package, or some combination of these.
 #. Carry out all necessary checks for the different software products (see
    below).
-#. Change the state of the release to **publish**.
+
+.. todo::
+    If issues are found that require a new commit, the tag can be reassigned to
+    a new commit (extra effort to force update of tag in remote and for other
+    developers to move tag in their clones as well?).  After that, what needs to
+    be done to reissue the release at the updated tag?
 
 Command line tools
 ^^^^^^^^^^^^^^^^^^
@@ -161,6 +168,9 @@ Otherwise,
 #. Review the package's webpage on PyPI.
 #. In a clean virtual environment, follow the installation guide for installing
    from |pip| and to test the installation
+#. Ask Taweret team to trigger actions, confirm that this newest version is
+   being installed, and that all actions pass.  Review Jupyter book rendering of
+   trees-based notebooks.
 
 Post-release actions
 --------------------
