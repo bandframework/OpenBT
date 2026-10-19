@@ -2176,176 +2176,184 @@ openbt.scanpost<-function(post)
 # ---------------------------------------------------------------------------
 # 4. UNIFIED SAVE / LOAD  — single entry point, pluggable backends
 # ---------------------------------------------------------------------------
-#Save a posterior tree fit from the tmp working directory
 # Supported destinations / sources:
-#   "local"   — local .obt zip file (default)
+#   "local"   — local file (default)
 #   "s3"      — AWS S3
 #   "gcs"     — Google Cloud Storage
 #   "azure"   — Azure Blob Storage
 #   "arweave" — Arweave permaweb
 #
 # ------------------------------------------------------------
-# openbt.save(fit, dest, ...)
+# openbt.save(fit, file_name = NULL, dest = "local", bucket = NULL, wallet = NULL)
 # ------------------------------------------------------------
-#  dest = "local"   required: none
-#                   optional: fname = "mymodel"  (default: fit$modelname)
+#  dest       file_name          bucket                 wallet
+#  "local"    path on disk       —                      —
+#  "s3"       S3 key             S3 bucket (required)   —
+#  "gcs"      GCS object name    GCS bucket (required)  —
+#  "azure"    blob name          container (required)   —
+#  "arweave"  (ignored)          —                      wallet path (optional)
 #
-#  dest = "s3"      required: bucket = "my-bucket"
-#                   optional: prefix = "openbt-models/"
-#                             key    = "path/to/file.zip"  (overrides prefix)
+#  fit may be an OpenBT model or raw data (e.g. a data frame).
+#  file_name = NULL  -> "<modelname>_<timestamp>.obt" for models,
+#                       "data_<timestamp>.rds" for raw data.
+#  Models always get the .obt extension (appended if missing).
+#  Raw data format follows the file_name extension: .csv or .rds (default).
 #
-#  dest = "gcs"     required: bucket = "my-bucket"
-#                   optional: prefix = "openbt-models/"
-#                             object = "path/to/file.zip"  (overrides prefix)
-#
-#  dest = "azure"   required: container = "my-container"
-#                   optional: prefix = "openbt-models/"
-#                             blob   = "path/to/file.zip"  (overrides prefix)
-#
-#  dest = "arweave" optional: wallet = "/path/to/wallet.json"
+#  Returns: local -> file path; s3/gcs/azure -> list of location fields;
+#           arweave -> transaction ID (needed to load it back).
 #
 # Examples:
 #   openbt.save(fit)
-#   openbt.save(fit, dest = "local", fname = "run1")
-#   openbt.save(fit, dest = "s3",    bucket = "my-bucket")
-#   openbt.save(fit, dest = "s3",    bucket = "my-bucket", key = "models/run1.zip")
-#   openbt.save(fit, dest = "gcs",   bucket = "my-bucket")
-#   openbt.save(fit, dest = "azure", container = "models")
-#   openbt.save(fit, dest = "arweave", wallet = "~/wallet.json")
+#   openbt.save(fit, "run1")
+#   openbt.save(fit, "models/run1", dest = "s3", bucket = "my-bucket")
+#   openbt.save(df,  "train.csv",   dest = "gcs", bucket = "my-bucket")
+#   openbt.save(fit, "run1",        dest = "azure", bucket = "my-container")
+#   txid <- openbt.save(fit, dest = "arweave", wallet = "~/wallet.json")
 # ------------------------------------------------------------
 
-openbt.save <- function(obj, dest = "local", format = "rds", ...) {
-  dest <- tolower(trimws(dest))
-  valid_dests <- c("local", "s3", "gcs", "azure", "arweave")
-  
-  if (!dest %in% valid_dests) {
-    stop("Unknown dest '", dest, "'. Choose one of: ", paste(valid_dests, collapse = ", "), ".")
-  }
+.openbt_valid_locations <- c("local", "s3", "gcs", "azure", "arweave")
 
-  args <- list(...)
-  is_model <- inherits(obj, "OpenBT_posterior") || inherits(obj, "OpenBT_calibrate_posterior")
+# Internal: normalise and validate a dest/source value.
+.openbt_check_location <- function(where, argname) {
+  where <- tolower(trimws(where))
+  if (!where %in% .openbt_valid_locations)
+    stop("Unknown ", argname, " '", where, "'. Choose one of: ",
+         paste(.openbt_valid_locations, collapse = ", "), ".")
+  where
+}
 
-  # --- 1. PREPARE THE FILE FOR UPLOAD ---
-  if (is_model) {
-    upload_path <- .openbt_zip_model(obj)
-    default_name <- if(!is.null(args$fname)) args$fname else obj$modelname
-    default_name <- paste0(default_name, "_", format(Sys.time(), "%Y%m%d%H%M%S"), ".obt")
-  } else {
-    # It's raw data. Save it to a temporary file in the requested format.
-    upload_path <- tempfile(fileext = paste0(".", format))
-    default_name <- paste0("data_", format(Sys.time(), "%Y%m%d%H%M%S"), ".", format)
-    
-    if (format == "rds") {
-      saveRDS(obj, upload_path)
-    } else if (format == "csv") {
-      write.csv(obj, upload_path, row.names = FALSE)
-    } else {
-      stop("Unsupported format for raw data. Use 'rds' or 'csv'.")
-    }
-    cat(sprintf("Prepared raw data as %s for upload.\n", toupper(format)))
-  }
-
-  # --- 2. ROUTE TO DESTINATION ---
-  if (dest == "local") {
-    fname <- if (!is.null(args$fname)) args$fname else default_name
-    # Append format extension if saving raw data and extension not already present
-    if (!is_model && !grepl(paste0("\\.", format, "$"), fname)) {
-      fname <- paste0(fname, ".", format)
-    }
-    file.copy(upload_path, fname, overwrite = TRUE)
-    unlink(upload_path)
-    cat("Saved to local file:", fname, "\n")
-    return(invisible(fname))
-
-  } else if (dest == "s3") {
-    if (is.null(args$bucket)) stop("dest='s3' requires argument: bucket")
-    key <- if (!is.null(args$key)) args$key else paste0(if (!is.null(args$prefix)) args$prefix else "openbt-data/", default_name)
-    result <- s3.save(upload_path, args$bucket, key)
-    unlink(upload_path)
-    return(invisible(result))
-
-  } else if (dest == "gcs") {
-    if (is.null(args$bucket)) stop("dest='gcs' requires argument: bucket")
-    object <- if (!is.null(args$object)) args$object else paste0(if (!is.null(args$prefix)) args$prefix else "openbt-data/", default_name)
-    result <- gcs.save(upload_path, args$bucket, object)
-    unlink(upload_path)
-    return(invisible(result))
-
-  } else if (dest == "azure") {
-    if (is.null(args$container)) stop("dest='azure' requires argument: container")
-    blob <- if (!is.null(args$blob)) args$blob else paste0(if (!is.null(args$prefix)) args$prefix else "openbt-data/", default_name)
-    result <- azure.save(upload_path, args$container, blob)
-    unlink(upload_path)
-    return(invisible(result))
-
-  } else if (dest == "arweave") {
-    result <- arweave.save(upload_path, args$wallet)
-    unlink(upload_path)
-    return(invisible(result))
+# Internal: validate bucket usage for a given dest/source.
+.openbt_check_bucket <- function(where, bucket, argname) {
+  if (where %in% c("s3", "gcs", "azure")) {
+    if (is.null(bucket)) stop(argname, "='", where, "' requires argument: bucket")
+  } else if (!is.null(bucket)) {
+    warning("bucket is ignored when ", argname, "='", where, "'")
   }
 }
 
+openbt.save <- function(fit, file_name = NULL, dest = "local", bucket = NULL, wallet = NULL) {
+  dest <- .openbt_check_location(dest, "dest")
+  .openbt_check_bucket(dest, bucket, "dest")
+  if (dest != "arweave" && !is.null(wallet))
+    warning("wallet is ignored when dest='", dest, "'")
+  if (dest == "arweave" && !is.null(file_name))
+    warning("file_name is ignored when dest='arweave'; the transaction ID identifies the file")
+
+  is_model  <- inherits(fit, "OpenBT_posterior") || inherits(fit, "OpenBT_calibrate_posterior")
+  timestamp <- format(Sys.time(), "%Y%m%d%H%M%S")
+
+  # --- 1. RESOLVE FILE NAME AND PREPARE THE FILE ---
+  if (is_model) {
+    if (is.null(file_name)) file_name <- paste0(fit$modelname, "_", timestamp)
+    if (!tolower(tools::file_ext(file_name)) %in% c("obt", "zip"))
+      file_name <- paste0(file_name, ".obt")
+    upload_path <- .openbt_zip_model(fit)
+  } else {
+    if (is.null(file_name)) file_name <- paste0("data_", timestamp)
+    format <- tolower(tools::file_ext(file_name))
+    if (format == "") {
+      format    <- "rds"
+      file_name <- paste0(file_name, ".rds")
+    }
+    upload_path <- tempfile(fileext = paste0(".", format))
+    if (format == "rds") {
+      saveRDS(fit, upload_path)
+    } else if (format == "csv") {
+      write.csv(fit, upload_path, row.names = FALSE)
+    } else {
+      stop("Unsupported extension '.", format, "' for raw data. Use .rds or .csv.")
+    }
+    cat(sprintf("Prepared raw data as %s.\n", toupper(format)))
+  }
+  on.exit(unlink(upload_path), add = TRUE)
+
+  # --- 2. ROUTE TO DESTINATION ---
+  result <- switch(dest,
+    local = {
+      out_dir <- dirname(file_name)
+      if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+      if (!file.copy(upload_path, file_name, overwrite = TRUE))
+        stop("Could not write local file: ", file_name)
+      cat("Saved to local file:", file_name, "\n")
+      file_name
+    },
+    s3      = s3.save(upload_path, bucket, file_name),
+    gcs     = gcs.save(upload_path, bucket, file_name),
+    azure   = azure.save(upload_path, bucket, file_name),
+    arweave = arweave.save(upload_path, wallet)
+  )
+  invisible(result)
+}
+
+# ------------------------------------------------------------
+# openbt.load(file_name, source = "local", bucket = NULL)
+# ------------------------------------------------------------
+#  source     file_name                  bucket
+#  "local"    path on disk               —
+#  "s3"       S3 key                     S3 bucket (required)
+#  "gcs"      GCS object name            GCS bucket (required)
+#  "azure"    blob name                  container (required)
+#  "arweave"  transaction ID from save   —
+#
+#  Local: if file_name has no extension and "<file_name>.obt" exists, it is used.
+#  Format is taken from the extension (.obt/.zip -> model, .rds, .csv); with no
+#  extension (always the case on Arweave) it is detected from the file contents.
+#
 # Examples:
-#   fit <- openbt.load("run1")                                 
-#   fit <- openbt.load(source = "local",   fname = "run1")
-#   fit <- openbt.load(source = "s3",      bucket = "my-bucket"
-#   fit <- openbt.load(source = "gcs",     bucket = "my-bucket"
-#   fit <- openbt.load(source = "azure",   container = "models"
-#   fit <- openbt.load(source = "arweave", txid = "abc123...")
+#   fit <- openbt.load("run1")
+#   fit <- openbt.load("models/run1.obt", source = "s3",    bucket = "my-bucket")
+#   df  <- openbt.load("train.csv",       source = "gcs",   bucket = "my-bucket")
+#   fit <- openbt.load("run1.obt",        source = "azure", bucket = "my-container")
+#   fit <- openbt.load(txid,              source = "arweave")
+# ------------------------------------------------------------
 
-openbt.load <- function(source = "local", format = "auto", ...) {
-  known_sources <- c("local", "s3", "gcs", "azure", "arweave")
-  if (!tolower(trimws(source)) %in% known_sources) {
-    return(openbt.load(source = "local", fname = source, format = format, ...))
-  }
+# Internal: detect file format from its leading bytes.
+.openbt_sniff_format <- function(path) {
+  magic <- readBin(path, "raw", n = 4)
+  if (length(magic) >= 4 && identical(magic[1:4], as.raw(c(0x50, 0x4b, 0x03, 0x04)))) return("obt")
+  if (length(magic) >= 2 && identical(magic[1:2], as.raw(c(0x1f, 0x8b)))) return("rds")
+  "csv"
+}
 
-  source <- tolower(trimws(source))
-  args <- list(...)
-  download_path <- tempfile()
+openbt.load <- function(file_name, source = "local", bucket = NULL) {
+  source <- .openbt_check_location(source, "source")
+  .openbt_check_bucket(source, bucket, "source")
 
-  
+  # --- 1. FETCH THE FILE ---
   if (source == "local") {
-    if (is.null(args$fname)) stop("source='local' requires argument: fname")
-    download_path <- args$fname
-  } else if (source == "s3") {
-    if (is.null(args$bucket) || is.null(args$key)) stop("source='s3' requires bucket and key")
-    download_path <- s3.load(args$bucket, args$key, out_path = tempfile())
-    if (format == "auto") format <- tools::file_ext(args$key)
-  } else if (source == "gcs") {
-    if (is.null(args$bucket) || is.null(args$object)) stop("source='gcs' requires bucket and object")
-    download_path <- gcs.load(args$bucket, args$object, out_path = tempfile())
-    if (format == "auto") format <- tools::file_ext(args$object)
-  } else if (source == "azure") {
-    if (is.null(args$container) || is.null(args$blob)) stop("source='azure' requires container and blob")
-    download_path <- azure.load(args$container, args$blob, out_path = tempfile())
-    if (format == "auto") format <- tools::file_ext(args$blob)
-  } else if (source == "arweave") {
-    if (is.null(args$txid)) stop("source='arweave' requires argument: txid")
-    download_path <- arweave.load(args$txid, out_path = tempfile())
-    # Arweave doesn't inherently store extensions in the txid, so you must specify format if not a model
+    if (tools::file_ext(file_name) == "" && !file.exists(file_name) &&
+        file.exists(paste0(file_name, ".obt")))
+      file_name <- paste0(file_name, ".obt")
+    if (!file.exists(file_name)) stop("File not found: ", file_name)
+    # Work on a copy so the model unpacker never deletes the user's file
+    download_path <- tempfile()
+    file.copy(file_name, download_path)
+  } else {
+    download_path <- switch(source,
+      s3      = s3.load(bucket, file_name, out_path = tempfile()),
+      gcs     = gcs.load(bucket, file_name, out_path = tempfile()),
+      azure   = azure.load(bucket, file_name, out_path = tempfile()),
+      arweave = arweave.load(file_name, out_path = tempfile())
+    )
   }
+  on.exit(unlink(download_path), add = TRUE)
 
   # --- 2. PROCESS THE FETCHED FILE ---
-  if (format == "auto" && source == "local") format <- tools::file_ext(download_path)
-  
-  # Default to model handling if the extension looks like a zip/model or wasn't specified
-  if (format %in% c("obt", "zip", "auto", "")) {
+  format <- if (source == "arweave") "" else tolower(tools::file_ext(file_name))
+  if (format == "") format <- .openbt_sniff_format(download_path)
+
+  if (format %in% c("obt", "zip")) {
     res <- .openbt_unzip_model(download_path)
-    if(source != "local") unlink(download_path)
-    return(res)
   } else if (format == "rds") {
     res <- readRDS(download_path)
-    if(source != "local") unlink(download_path)
     cat("Loaded raw data via RDS.\n")
-    return(res)
   } else if (format == "csv") {
     res <- read.csv(download_path)
-    if(source != "local") unlink(download_path)
     cat("Loaded raw data via CSV.\n")
-    return(res)
   } else {
-    stop("Unknown format: ", format)
+    stop("Unknown file extension '.", format, "'. Expected .obt, .zip, .rds or .csv.")
   }
+  res
 }
 
 
@@ -2396,8 +2404,8 @@ loadRData <- function(fname)
 
 # Shared helper: zip an OpenBT model folder and write fit_metadata.rds inside.
 .openbt_zip_model <- function(fit) {
-  if (!inherits(fit, "OpenBT_posterior"))
-    stop("fit must be an OpenBT_posterior object")
+  if (!inherits(fit, "OpenBT_posterior") && !inherits(fit, "OpenBT_calibrate_posterior"))
+    stop("fit must be an OpenBT_posterior or OpenBT_calibrate_posterior object")
   if (!dir.exists(fit$folder))
     stop("fit$folder does not exist: ", fit$folder)
 
