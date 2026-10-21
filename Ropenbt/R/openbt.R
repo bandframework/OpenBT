@@ -45,7 +45,10 @@ adaptevery=100,
 summarystats=FALSE,
 truncateds=NULL,
 model=NULL,
-modelname="model"
+modelname="model",
+nshards=1,
+shardcuts=NULL,
+u.train=NULL
 )
 {
 #--------------------------------------------------
@@ -148,6 +151,22 @@ mh = ntreeh
 if(!is.matrix(x.train)){x.train = matrix(x.train, ncol = 1)}
 n = length(y.train)
 p = ncol(x.train)
+#--------------------------------------------------
+#sharding: the data are split into nshards shards by a U(0,1) variable u and
+#each shard is fit with tc/nshards processes (one master, the rest data).
+if(nshards>1)
+{
+   if(modeltype!=MODEL_BART && modeltype!=MODEL_HBART)
+      stop("Sharding (nshards>1) is only supported for model='bart' or model='hbart'.\n")
+   if(tc %% nshards != 0 || tc/nshards < 2)
+      stop("Sharding requires tc to be a multiple of nshards with tc/nshards>=2.\n")
+   if(!is.null(shardcuts))
+      if(length(shardcuts)!=nshards-1 || any(diff(shardcuts)<=0) || min(shardcuts)<=0 || max(shardcuts)>=1)
+         stop("shardcuts must be nshards-1 strictly increasing values in (0,1).\n")
+   if(!is.null(u.train))
+      if(length(u.train)!=n || min(u.train)<0 || max(u.train)>=1)
+         stop("u.train must be a vector of length(y.train) values in [0,1).\n")
+}
 #np = nrow(x.test)
 x = t(x.train)
 #xp = t(x.test)
@@ -326,6 +345,10 @@ froot="f"
 fsdroot="fsd"
 wproot="wpr"
 xiroot="xi"
+shardcutroot="none"
+uroot="none"
+if(!is.null(shardcuts)) shardcutroot="ucuts"
+if(!is.null(u.train)) uroot="u"
 folder=tempdir(check=TRUE)
 if(!dir.exists(folder)) dir.create(folder)
 tmpsubfolder=tempfile(tmpdir="")
@@ -341,6 +364,7 @@ writeLines(c(paste(modeltype),xroot,yroot,fmean.out,paste(m),paste(mh),paste(nd)
             paste(pbd),paste(pb),paste(pbdh),paste(pbh),paste(stepwpert),paste(stepwperth),
             paste(probchv),paste(probchvh),paste(minnumbot),paste(minnumboth),
             paste(printevery),paste(xiroot),paste(modelname),paste(summarystats)),fout)
+if(nshards>1) writeLines(c(paste(nshards),shardcutroot,uroot),fout)
 close(fout)
 # folder=paste(".",modelname,"/",sep="")
 # system(paste("rm -rf ",folder,sep=""))
@@ -357,6 +381,15 @@ xlist=split(as.data.frame(x.train),(seq(n)-1) %/% (n/nslv))
 for(i in 1:nslv) write(t(xlist[[i]]),file=paste(folder,"/",xroot,i,sep=""))
 slist=split(sigmav,(seq(n)-1) %/% (n/nslv))
 for(i in 1:nslv) write(slist[[i]],file=paste(folder,"/",sroot,i,sep=""))
+if(nshards>1)
+{
+   if(!is.null(shardcuts)) write(shardcuts,file=paste(folder,"/",shardcutroot,sep=""))
+   if(!is.null(u.train))
+   {
+      ulist=split(u.train,(seq(n)-1) %/% (n/nslv))
+      for(i in 1:nslv) write(ulist[[i]],file=paste(folder,"/",uroot,i,sep=""))
+   }
+}
 chv[is.na(chv)]=0 # if a var as 0 levels it will have a cor of NA so we'll just set those to 0.
 write(chv,file=paste(folder,"/",chgvroot,sep=""))
 for(i in 1:p) write(xi[[i]],file=paste(folder,"/",xiroot,i,sep=""))
@@ -428,8 +461,34 @@ res=list()
 
 # Read in the influence metrics.
 res$influence=NULL
-for(i in 1:nslv)
-   res$influence=rbind(res$influence,as.matrix(read.table(paste(folder,"/",modelname,".influence",i,sep=""))))
+res$nshards=nshards
+if(nshards>1)
+{
+   # Only the data ranks of each shard write files and their rows carry a
+   # leading observation id, which we use to restore the original data order.
+   so=NULL
+   for(i in 1:nslv)
+   {
+      fname=paste(folder,"/",modelname,".influence",i,sep="")
+      if(file.exists(fname)) res$influence=rbind(res$influence,as.matrix(read.table(fname)))
+      fname=paste(folder,"/",modelname,".shardobs",i,sep="")
+      if(file.exists(fname)) so=rbind(so,as.matrix(read.table(fname)))
+   }
+   res$influence=res$influence[order(res$influence[,1]),-1,drop=FALSE]
+   rownames(res$influence)=NULL
+   so=so[order(so[,1]),,drop=FALSE]
+   res$u=as.vector(so[,2])
+   res$shard=as.vector(so[,3])+1 # shards are numbered 1,...,nshards in R
+
+   # Shard cutpoints, weights and sizes.
+   sh=scan(paste(folder,"/",modelname,".shards",sep=""),quiet=TRUE)
+   S=sh[1]
+   res$shards=list(cuts=sh[1+seq_len(S-1)],w=sh[S+seq_len(S)],ns=sh[2*S+seq_len(S)])
+} else
+{
+   for(i in 1:nslv)
+      res$influence=rbind(res$influence,as.matrix(read.table(paste(folder,"/",modelname,".influence",i,sep=""))))
+}
 
 colnames(res$influence)=c("MeanCookD", "MaxCookD", "KLDiv", "CPOinv")
 res$modeltype=modeltype
@@ -526,6 +585,7 @@ writeLines(c(fit$modelname,fit$modeltype,fit$xiroot,xproot,fproot,
             paste(fit$nd),paste(fit$m),
             paste(fit$mh),paste(p),paste(k),paste(tc),
             fmean.out), fout)
+if(!is.null(fit$nshards) && fit$nshards>1) writeLines(paste(fit$nshards),fout)
 close(fout)
 
 #--------------------------------------------------
@@ -689,6 +749,7 @@ q.upper=0.975
 #--------------------------------------------------
 # params
 if(is.null(fit)) stop("No fitted model specified!\n")
+if(!is.null(fit$nshards) && fit$nshards>1) stop("vartivity.openbt is not yet supported for sharded fits (nshards>1).\n")
 p=length(fit$xicuts)
 m=fit$m
 mh=fit$mh
@@ -771,6 +832,7 @@ tc=2
 #--------------------------------------------------
 # params
 if(is.null(fit)) stop("No fitted model specified!\n")
+if(!is.null(fit$nshards) && fit$nshards>1) stop("sobol.openbt is not yet supported for sharded fits (nshards>1).\n")
 p=length(fit$xicuts)
 m=fit$m
 mh=fit$mh
@@ -930,6 +992,8 @@ tc=2
 #--------------------------------------------------
 # params
 if(is.null(fit1) || is.null(fit2)) stop("No fitted models specified!\n")
+for(fit in list(fit1,fit2,fit3))
+   if(!is.null(fit$nshards) && fit$nshards>1) stop("mopareto.openbt is not yet supported for sharded fits (nshards>1).\n")
 #if(fit1$xicuts != fit2$xicuts) stop("Models not compatible\n")
 if(fit1$nd != fit2$nd) stop("Models have different number of posterior samples\n")
 p=length(fit1$xicuts)
@@ -1252,6 +1316,7 @@ influence.openbt<-function(x.infl,y.infl,fit=NULL,infl.obs=NULL,dvec=NULL,tc=2,m
 {
    if(is.null(fit)) stop("Model fit object required.\n")
    if(class(fit)!="OpenBT_posterior") stop("Model fit object not recognized.\n")
+   if(!is.null(fit$nshards) && fit$nshards>1) stop("influence.openbt is not yet supported for sharded fits (nshards>1).\n")
    if(is.null(infl.obs)) stop("No hold-out drop id specified for reweighting (infl.obs=NULL).\n")
    if(min(infl.obs)<1) stop("Invalid drop id infl.obs=",infl.obs,".\n")
    if(max(infl.obs)>nrow(x.infl)) stop("Invalid drop id infl.obs=",infl.obs,".\n")
@@ -2100,6 +2165,7 @@ return(res)
 # the node cutpoints and the node thetas.
 openbt.scanpost<-function(post)
 {
+   if(!is.null(post$nshards) && post$nshards>1) stop("openbt.scanpost is not yet supported for sharded fits (nshards>1).\n")
    fp=file(paste(post$folder,"/",post$modelname,".fit",sep=""),open="r")
    if(scan(fp,what=integer(),nmax=1,quiet=TRUE) != post$nd) stop("Error scanning posterior\n")
    if(scan(fp,what=integer(),nmax=1,quiet=TRUE) != post$m) stop("Error scanning posterior\n")
@@ -2260,6 +2326,8 @@ print.OpenBT_posterior<-function(x, ...)
    cat("ntree=", post$m, " \n",sep="")
    cat("ntreeh=",post$mh," \n",sep="")
    cat(post$nd," posterior draws.\n")
+   if(!is.null(post$nshards) && post$nshards>1)
+      cat("Shards: ",post$nshards," (weights ",paste(signif(post$shards$w,4),collapse=" "),")\n",sep="")
    summary(post$xicuts)
 }
 
