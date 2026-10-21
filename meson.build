@@ -58,10 +58,11 @@ src_psbrt    = ['src/psbrt.cpp']
 src_amxbrt   = ['src/amxbrt.cpp']
 src_poisson  = ['src/singlepoisson.cpp']
 src_binomial = ['src/singlebinomial.cpp']
+src_shard    = ['src/shardinfo.cpp']
 
 lib_srcs  = src_crn + src_tree + src_brt + src_mbrt + src_sbrt
 lib_srcs += src_mxbrt + src_ambrt + src_psbrt + src_amxbrt
-lib_srcs += src_poisson + src_binomial
+lib_srcs += src_poisson + src_binomial + src_shard
 
 # ----- SPECIFY LIBRARY UNIT TESTS
 # Only include those tests that presently build & run through successfully.
@@ -99,6 +100,7 @@ if not get_option('pypkg')
                     'includes/psbrt.h',
                     'includes/rn.h',
                     'includes/sbrt.h',
+                    'includes/shardinfo.h',
                     'includes/singlebinomial.h',
                     'includes/singlepoisson.h',
                     'includes/tnorm.h',

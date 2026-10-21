@@ -24,6 +24,7 @@
 #include "tnorm.h"
 #include "mxbrt.h"
 #include "amxbrt.h"
+#include "shardinfo.h"
 
 using std::cout;
 using std::endl;
@@ -188,6 +189,18 @@ int main(int argc, char* argv[])
    std::string summarystats_str;
    conf >> summarystats_str;
    if(summarystats_str=="TRUE"){ summarystats = true; }
+
+   //sharding: number of shards, shard cutpoints file and u file root.
+   //These are optional so that older config files run unsharded.
+   size_t nshards=1;
+   std::string shardcutcore("none");
+   std::string ucore("none");
+   int tempnshards;
+   if(conf >> tempnshards) {
+      if(tempnshards>1) nshards=(size_t)tempnshards;
+      conf >> shardcutcore;
+      conf >> ucore;
+   }
    conf.close();
 
    //folder
@@ -195,19 +208,44 @@ int main(int argc, char* argv[])
 
    //MPI initialization
    int mpirank=0;
+   int worldrank=0;   //rank in MPI_COMM_WORLD (mpirank becomes the rank within the shard when sharding)
+   size_t shardid=0;  //shard this process belongs to
 #ifdef _OPENMPI
    int mpitc;
+   MPI_Comm shardcomm=MPI_COMM_WORLD;
    MPI_Init(NULL,NULL);
    MPI_Barrier(MPI_COMM_WORLD);
    MPI_Comm_rank(MPI_COMM_WORLD,&mpirank);
    MPI_Comm_size(MPI_COMM_WORLD,&mpitc);
+   worldrank=mpirank;
 #ifndef SILENT
    cout << "\nMPI: node " << mpirank << " of " << mpitc << " processes." << endl;
 #endif
    if(tc<=1) return 1; //need at least 2 processes!
    if(tc!=mpitc) return 2; //mismatch between how MPI was started and how the data is prepared according to tc.
+
+   //distinct random number streams on each rank so that shards run independent chains.
+   //(within a shard, mpi_resetrn synchronizes the master and slaves as usual.)
+   gen.set_seed(static_cast<long long>(std::chrono::high_resolution_clock::now()
+                                   .time_since_epoch()
+                                   .count())+mpirank);
+
+   if(nshards>1) {
+      if(modeltype!=MODEL_BART && modeltype!=MODEL_HBART) {
+         if(mpirank==0) cout << "Sharding is currently only supported for BART and HBART models." << endl;
+         MPI_Finalize();
+         return 8;
+      }
+      if(((size_t)mpitc)%nshards!=0 || ((size_t)mpitc)/nshards<2) {
+         if(mpirank==0) cout << "Sharding requires the number of MPI processes to be a multiple of the number of shards, with at least 2 processes per shard." << endl;
+         MPI_Finalize();
+         return 9;
+      }
+   }
 // #else
 //    if(tc!=1) return 0; //serial mode should have no slave threads!
+#else
+   if(nshards>1) { cout << "Sharding requires an MPI build." << endl; return 8; }
 #endif
 
 
@@ -476,6 +514,108 @@ int main(int argc, char* argv[])
    if(n!=nsig) { cout << "PROBLEM LOADING SIGMAV" << endl; return 7; }
 #endif
 
+   //--------------------------------------------------
+   //Sharding: assign each observation to a shard of the common U-tree using its
+   //u value, move it to the data ranks of that shard, then split MPI_COMM_WORLD
+   //so that each shard runs its own master/slave group.
+   shardinfo shi;
+   std::vector<double> u;
+   std::vector<double> obsid;
+#ifdef _OPENMPI
+   if(nshards>1) {
+      size_t T=((size_t)mpitc)/nshards-1; //number of data ranks per shard
+
+      //common U-tree: equal width shards unless cutpoints are given
+      bool shardok=true;
+      if(shardcutcore=="none")
+         shi.setequal(nshards);
+      else {
+         std::vector<double> cuts;
+         double ctemp;
+         std::ifstream cf(folder + shardcutcore);
+         while(cf >> ctemp)
+            cuts.push_back(ctemp);
+         shardok=shi.setcuts(cuts) && shi.S==nshards;
+      }
+
+      //global ids of the local observations (in data file order)
+      unsigned long nlocal=(unsigned long)n, offset=0;
+      MPI_Exscan(&nlocal,&offset,1,MPI_UNSIGNED_LONG,MPI_SUM,MPI_COMM_WORLD);
+      if(mpirank==0) offset=0; //MPI_Exscan leaves the result on rank 0 undefined
+      obsid.resize(n);
+      for(size_t i=0;i<n;i++) obsid[i]=(double)(offset+i);
+
+      //u values: read from file or draw from U(0,1)
+      if(ucore!="none") {
+         if(mpirank>0) {
+            double utemp;
+            std::ifstream uf(folder + ucore + std::to_string(mpirank));
+            while(uf >> utemp)
+               u.push_back(utemp);
+            if(u.size()!=n) shardok=false;
+            for(size_t i=0;i<u.size();i++)
+               if(u[i]<0.0 || u[i]>1.0) shardok=false;
+         }
+      }
+      else {
+         long long useed=static_cast<long long>(std::chrono::high_resolution_clock::now()
+                                   .time_since_epoch()
+                                   .count());
+         MPI_Bcast(&useed,1,MPI_LONG_LONG,0,MPI_COMM_WORLD);
+         crn ugen;
+         ugen.set_seed(useed+mpirank);
+         u.resize(n);
+         for(size_t i=0;i<n;i++) u[i]=ugen.uniform();
+      }
+      int shardbad=shardok ? 0 : 1;
+      MPI_Allreduce(MPI_IN_PLACE,&shardbad,1,MPI_INT,MPI_MAX,MPI_COMM_WORLD);
+      if(shardbad) {
+         if(mpirank==0) cout << "PROBLEM SETTING UP SHARDS (check nshards, shard cutpoints and u values)" << endl;
+         MPI_Finalize();
+         return 10;
+      }
+
+      //move each observation to its shard
+      mpi_shard_exchange(MPI_COMM_WORLD,shi,T,p,x,y,sigmav,u,obsid);
+      n=y.size();
+      nsig=n;
+
+      //one master/slave group per shard
+      shardid=((size_t)mpirank)/(T+1);
+      MPI_Comm_split(MPI_COMM_WORLD,(int)shardid,mpirank,&shardcomm);
+      MPI_Comm_rank(shardcomm,&mpirank);
+      MPI_Comm_size(shardcomm,&tc);
+
+      //shard sizes, and check every data rank received data
+      std::vector<unsigned long> nsv(nshards,0);
+      nsv[shardid]=(unsigned long)n;
+      MPI_Allreduce(MPI_IN_PLACE,nsv.data(),nshards,MPI_UNSIGNED_LONG,MPI_SUM,MPI_COMM_WORLD);
+      for(size_t s=0;s<nshards;s++) shi.ns[s]=(size_t)nsv[s];
+      int empty=(mpirank>0 && n==0) ? 1 : 0;
+      MPI_Allreduce(MPI_IN_PLACE,&empty,1,MPI_INT,MPI_MAX,MPI_COMM_WORLD);
+      if(empty) {
+         if(worldrank==0) cout << "PROBLEM SHARDING DATA: a shard data rank received no observations" << endl;
+         MPI_Comm_free(&shardcomm);
+         MPI_Finalize();
+         return 11;
+      }
+
+      if(worldrank==0) {
+         cout << "Sharded fit: " << nshards << " shards, " << T << " data ranks per shard" << endl;
+         for(size_t s=0;s<nshards;s++) {
+            cout << "   shard " << s << ": weight=" << shi.w[s] << " n=" << shi.ns[s] << endl;
+            if(shi.ns[s]<2*minnumbot)
+               cout << "   Warning: shard " << s << " has too few observations to split its trees (minnumbot=" << minnumbot << ")" << endl;
+         }
+      }
+
+      //point the data at this rank's rows of its shard
+      di.tc=tc;
+      if(mpirank>0) { di.n=n; di.x=&x[0]; di.y=&y[0]; }
+      else { di.n=0; di.x=NULL; di.y=NULL; }
+   }
+#endif
+
    double *sig=&sigmav[0];
    dinfo disig;
    disig.n=0; disig.p=p; disig.x=NULL; disig.y=NULL; disig.tc=tc;
@@ -622,6 +762,7 @@ if(modeltype!=MODEL_MIXBART){
    //mpi rank
 #ifdef _OPENMPI
    ambm.setmpirank(mpirank);  //set the rank when using MPI.
+   ambm.setmpicomm(shardcomm);  //set the communicator (this shard's group, or MPI_COMM_WORLD if not sharding).
    ambm.setmpicvrange(lwr,upr); //range of variables each slave node will update in MPI change-of-var proposals.
 #endif
    //tree prior
@@ -672,6 +813,7 @@ if(modeltype!=MODEL_MIXBART){
    //mpi rank
 #ifdef _OPENMPI
    psbm.setmpirank(mpirank);  //set the rank when using MPI.
+   psbm.setmpicomm(shardcomm);  //set the communicator (this shard's group, or MPI_COMM_WORLD if not sharding).
    psbm.setmpicvrange(lwr,upr); //range of variables each slave node will update in MPI change-of-var proposals.
 #endif
    //tree prior
@@ -688,6 +830,9 @@ if(modeltype!=MODEL_MIXBART){
          &chgv  //initialize the change of variable correlation matrix.
          );
    psbm.setci(nu,lambda);
+
+   //only one process reports MCMC progress (shard 0's master when sharding)
+   bool printer=(mpirank==0 && shardid==0);
 
    //--------------------------------------------------
    //run mcmc
@@ -713,15 +858,16 @@ if(modeltype!=MODEL_MIXBART){
    std::vector<double> CPOinfl_temp(di.n,0.0);
 
 #ifdef _OPENMPI
-   double tstart=0.0,tend=0.0;
+   double tstart=0.0,tend=0.0,wtstart=0.0,wtend=0.0;
+   if(nshards>1) { MPI_Barrier(MPI_COMM_WORLD); wtstart=MPI_Wtime(); }
    if(mpirank==0) tstart=MPI_Wtime();
-   if(mpirank==0) cout << "Starting MCMC..." << endl;
+   if(printer) cout << "Starting MCMC..." << endl;
 #else
    cout << "Starting MCMC..." << endl;
 #endif
 
-   for(size_t i=0;i<nadapt;i++) { 
-      if((i % printevery) ==0 && mpirank==0) cout << "Adapt iteration " << i << endl;
+   for(size_t i=0;i<nadapt;i++) {
+      if((i % printevery) ==0 && printer) cout << "Adapt iteration " << i << endl;
 #ifdef _OPENMPI
       if(mpirank==0) ambm.draw(gen); else ambm.draw_mpislave(gen);
 #else
@@ -756,7 +902,7 @@ if(modeltype!=MODEL_MIXBART){
       }
    }
    for(size_t i=0;i<burn;i++) {
-      if((i % printevery) ==0 && mpirank==0) cout << "Burn iteration " << i << endl;
+      if((i % printevery) ==0 && printer) cout << "Burn iteration " << i << endl;
 #ifdef _OPENMPI
       if(mpirank==0) ambm.draw(gen); else ambm.draw_mpislave(gen);
 #else
@@ -793,7 +939,7 @@ if(modeltype!=MODEL_MIXBART){
       psbm.setstats(true);
    }
    for(size_t i=0;i<nd;i++) {
-      if((i % printevery) ==0 && mpirank==0) cout << "Draw iteration " << i << endl;
+      if((i % printevery) ==0 && printer) cout << "Draw iteration " << i << endl;
 #ifdef _OPENMPI
       if(mpirank==0) ambm.draw(gen); else ambm.draw_mpislave(gen);
 #else
@@ -856,21 +1002,49 @@ if(modeltype!=MODEL_MIXBART){
       }
    }
 #ifdef _OPENMPI
-   if(mpirank==0) {
-      tend=MPI_Wtime();
+   if(mpirank==0) tend=MPI_Wtime();
+   if(nshards==1 && mpirank==0)
       cout << "Training time was " << (tend-tstart)/60.0 << " minutes." << endl;
+   if(nshards>1) {
+      //gather each shard master's training time and report them with the overall time
+      std::vector<double> stimes(nshards,0.0);
+      if(mpirank==0) stimes[shardid]=(tend-tstart)/60.0;
+      MPI_Allreduce(MPI_IN_PLACE,stimes.data(),nshards,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+      MPI_Barrier(MPI_COMM_WORLD);
+      wtend=MPI_Wtime();
+      if(worldrank==0) {
+         double maxtime=0.0;
+         for(size_t s=0;s<nshards;s++) {
+            cout << "Shard " << s << " (n=" << shi.ns[s] << ") training time was " << stimes[s] << " minutes." << endl;
+            maxtime=std::max(maxtime,stimes[s]);
+         }
+         cout << "Maximum shard training time was " << maxtime << " minutes." << endl;
+         cout << "Training time was " << (wtend-wtstart)/60.0 << " minutes." << endl;
+      }
    }
 #endif
 
    // Finalize KLinfl and write out to files.
+   // When sharding, rows are no longer in data file order so a leading column
+   // gives each row's global observation id, and the u value and shard of each
+   // observation are also written out.
    if(mpirank>0) {
       for(size_t j=0;j<di.n;j++) CPOinfl[j] = std::log(CPOinfl[j]);
       for(size_t j=0;j<di.n;j++) KLinfl[j] = KLinfl[j] + CPOinfl[j];
 
-      std::ofstream omf(folder + modelname + ".influence" + std::to_string(mpirank));
-      for(size_t j=0;j<di.n;j++) 
+      std::ofstream omf(folder + modelname + ".influence" + std::to_string(worldrank));
+      for(size_t j=0;j<di.n;j++) {
+         if(nshards>1) omf << (size_t)obsid[j] << " ";
          omf << std::scientific << Cookd_mean[j] << " " << std::scientific << Cookd_max[j] << " " << std::scientific << KLinfl[j] << " " << std::scientific << CPOinfl[j] << endl;
+      }
       omf.close();
+
+      if(nshards>1) {
+         std::ofstream osf(folder + modelname + ".shardobs" + std::to_string(worldrank));
+         for(size_t j=0;j<di.n;j++)
+            osf << (size_t)obsid[j] << " " << std::scientific << u[j] << " " << shardid << endl;
+         osf.close();
+      }
    }
 
    //Flatten posterior trees to a few (very long) vectors so we can just pass pointers
@@ -904,8 +1078,10 @@ if(modeltype!=MODEL_MIXBART){
             e_stheta->insert(e_stheta->end(),stheta[i*mh+j].begin(),stheta[i*mh+j].end());
          }
 
-   //write out to file
-      std::ofstream omf(folder + modelname + ".fit");
+   //write out to file (one fit file per shard when sharding)
+      std::string fitname = folder + modelname + ".fit";
+      if(nshards>1) fitname += "." + std::to_string(shardid);
+      std::ofstream omf(fitname);
       omf << nd << endl;
       omf << m << endl;
       omf << mh << endl;
@@ -934,10 +1110,19 @@ if(modeltype!=MODEL_MIXBART){
       cout << " done." << endl;
    }
 
+   //write out the common U-tree (shard cutpoints, weights and sizes)
+   if(nshards>1 && worldrank==0) {
+      std::ofstream osh(folder + modelname + ".shards");
+      shi.write(osh);
+      osh.close();
+   }
+
 
    // summary statistics
    if(summarystats) {
-      cout << "Calculating summary statistics" << endl;
+      cout << "Calculating summary statistics";
+      if(nshards>1) cout << " (shard " << shardid << ")";
+      cout << endl;
       unsigned int varcount[p];
       for(size_t i=0;i<p;i++) varcount[i]=0;
       unsigned int tmaxd=0;
@@ -971,6 +1156,7 @@ if(modeltype!=MODEL_MIXBART){
    delete[] lwr;
    delete[] upr;
    if(mpirank>0) delete[] r;
+   if(nshards>1) MPI_Comm_free(&shardcomm);
    MPI_Finalize();
 #else
    delete[] r;
