@@ -63,32 +63,32 @@ void brt::draw_mpislave(rn& gen)
 
    // Structural/topological proposal(s)
    // MPI receive the topological proposal type and nlid and nrid if applicable.
-   MPI_Recv(buffer,SIZE_UINT3,MPI_PACKED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+   MPI_Recv(buffer,SIZE_UINT3,MPI_PACKED,0,MPI_ANY_TAG,comm,&status);
    sinfo& tsil = *newsinfo();
    sinfo& tsir = *newsinfo();
    if(status.MPI_TAG==MPI_TAG_BD_BIRTH_VC) {
       unsigned int nxid,v,c;
       tree::tree_p nx;
-      MPI_Unpack(buffer,SIZE_UINT3,&position,&nxid,1,MPI_UNSIGNED,MPI_COMM_WORLD);
-      MPI_Unpack(buffer,SIZE_UINT3,&position,&v,1,MPI_UNSIGNED,MPI_COMM_WORLD);
-      MPI_Unpack(buffer,SIZE_UINT3,&position,&c,1,MPI_UNSIGNED,MPI_COMM_WORLD);
+      MPI_Unpack(buffer,SIZE_UINT3,&position,&nxid,1,MPI_UNSIGNED,comm);
+      MPI_Unpack(buffer,SIZE_UINT3,&position,&v,1,MPI_UNSIGNED,comm);
+      MPI_Unpack(buffer,SIZE_UINT3,&position,&c,1,MPI_UNSIGNED,comm);
       nx=t.getptr((size_t)nxid);
       getsuff(nx,(size_t)v,(size_t)c,tsil,tsir);
       MPI_Status status2;
-      MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status2);
+      MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,comm,&status2);
       if(status2.MPI_TAG==MPI_TAG_BD_BIRTH_VC_ACCEPT) t.birthp(nx,(size_t)v,(size_t)c,0.0,0.0); //accept birth
       //else reject, for which we do nothing.
    }
    else if(status.MPI_TAG==MPI_TAG_BD_DEATH_LR) {
       unsigned int nlid,nrid;
       tree::tree_p nl,nr;
-      MPI_Unpack(buffer,SIZE_UINT3,&position,&nlid,1,MPI_UNSIGNED,MPI_COMM_WORLD);
-      MPI_Unpack(buffer,SIZE_UINT3,&position,&nrid,1,MPI_UNSIGNED,MPI_COMM_WORLD);
+      MPI_Unpack(buffer,SIZE_UINT3,&position,&nlid,1,MPI_UNSIGNED,comm);
+      MPI_Unpack(buffer,SIZE_UINT3,&position,&nrid,1,MPI_UNSIGNED,comm);
       nl=t.getptr((size_t)nlid);
       nr=t.getptr((size_t)nrid);
       getsuff(nl,nr,tsil,tsir);
       MPI_Status status2;
-      MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status2);
+      MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,comm,&status2);
       if(status2.MPI_TAG==MPI_TAG_BD_DEATH_LR_ACCEPT) t.deathp(nl->getp(),0.0); //accept death
       //else reject, for which we do nothing.
    }
@@ -114,19 +114,19 @@ void brt::draw_mpislave(rn& gen)
          std::vector<sinfo*>& sivold = newsinfovec();
          std::vector<sinfo*>& sivnew = newsinfovec();
          pertnode = intnodes[pertdx];
-         MPI_Recv(buffer,SIZE_UINT3,MPI_PACKED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+         MPI_Recv(buffer,SIZE_UINT3,MPI_PACKED,0,MPI_ANY_TAG,comm,&status);
          if(status.MPI_TAG==MPI_TAG_PERTCV)
          {
             size_t oldc = pertnode->getc();
             unsigned int propcint;
             position=0;
-            MPI_Unpack(buffer,SIZE_UINT1,&position,&propcint,1,MPI_UNSIGNED,MPI_COMM_WORLD);
+            MPI_Unpack(buffer,SIZE_UINT1,&position,&propcint,1,MPI_UNSIGNED,comm);
             size_t propc=(size_t)propcint;
             pertnode->setc(propc);
             tree::npv bnv;
             getpertsuff(pertnode,bnv,oldc,sivold,sivnew);
             MPI_Status status2;
-            MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status2);
+            MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,comm,&status2);
             if(status2.MPI_TAG==MPI_TAG_PERTCV_ACCEPT) pertnode->setc(propc); //accept new cutpoint
             //else reject, for which we do nothing.
          }
@@ -138,22 +138,22 @@ void brt::draw_mpislave(rn& gen)
             unsigned int propcint;
             unsigned int propvint;
             position=0;
-            mpi_update_norm_cormat(rank,tc,pertnode,*xi,(*mi.corv)[oldv],chv_lwr,chv_upr);
-            MPI_Recv(buffer,SIZE_UINT3,MPI_PACKED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
-            MPI_Unpack(buffer,SIZE_UINT3,&position,&propcint,1,MPI_UNSIGNED,MPI_COMM_WORLD);
-            MPI_Unpack(buffer,SIZE_UINT3,&position,&propvint,1,MPI_UNSIGNED,MPI_COMM_WORLD);
-            MPI_Unpack(buffer,SIZE_UINT3,&position,&didswap,1,MPI_CXX_BOOL,MPI_COMM_WORLD);
+            mpi_update_norm_cormat(rank,tc,pertnode,*xi,(*mi.corv)[oldv],chv_lwr,chv_upr,comm);
+            MPI_Recv(buffer,SIZE_UINT3,MPI_PACKED,0,MPI_ANY_TAG,comm,&status);
+            MPI_Unpack(buffer,SIZE_UINT3,&position,&propcint,1,MPI_UNSIGNED,comm);
+            MPI_Unpack(buffer,SIZE_UINT3,&position,&propvint,1,MPI_UNSIGNED,comm);
+            MPI_Unpack(buffer,SIZE_UINT3,&position,&didswap,1,MPI_CXX_BOOL,comm);
             size_t propc=(size_t)propcint;
             size_t propv=(size_t)propvint;
             pertnode->setc(propc);
             pertnode->setv(propv);
             if(didswap)
                pertnode->swaplr();
-            mpi_update_norm_cormat(rank,tc,pertnode,*xi,(*mi.corv)[propv],chv_lwr,chv_upr);
+            mpi_update_norm_cormat(rank,tc,pertnode,*xi,(*mi.corv)[propv],chv_lwr,chv_upr,comm);
             tree::npv bnv;
             getchgvsuff(pertnode,bnv,oldc,oldv,didswap,sivold,sivnew);
             MPI_Status status2;
-            MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status2);
+            MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,comm,&status2);
             if(status2.MPI_TAG==MPI_TAG_PERTCHGV_ACCEPT) { //accept change var and pert
                pertnode->setc(propc);
                pertnode->setv(propv);
@@ -544,7 +544,7 @@ void brt::mpi_resetrn(rn& gen)
 
       MPI_Request *request=new MPI_Request[tc];
       for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Isend(&ulstate,1,MPI_UNSIGNED_LONG,i,MPI_TAG_RESET_RNG,MPI_COMM_WORLD,&request[i-1]);
+         MPI_Isend(&ulstate,1,MPI_UNSIGNED_LONG,i,MPI_TAG_RESET_RNG,comm,&request[i-1]);
       }
       MPI_Waitall(tc,request,MPI_STATUSES_IGNORE);
       delete[] request;
@@ -554,7 +554,7 @@ void brt::mpi_resetrn(rn& gen)
       unsigned long ulstate;
       MPI_Status status;
 
-      MPI_Recv(&ulstate,1,MPI_UNSIGNED_LONG,0,MPI_TAG_RESET_RNG,MPI_COMM_WORLD,&status); 
+      MPI_Recv(&ulstate,1,MPI_UNSIGNED_LONG,0,MPI_TAG_RESET_RNG,comm,&status); 
 
       std::string strstate=std::to_string(ulstate);
       std::stringstream state;
@@ -579,7 +579,7 @@ void brt::mpi_resetrn(rn& gen)
       seconds=(int)difftime(timer,mktime(&y2k));
 
       for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Isend(&seconds,1,MPI_INT,i,MPI_TAG_RESET_RNG,MPI_COMM_WORLD,&request[i-1]);
+         MPI_Isend(&seconds,1,MPI_INT,i,MPI_TAG_RESET_RNG,comm,&request[i-1]);
       }
 
       crn& tempgen=static_cast<crn&>(gen);
@@ -592,7 +592,7 @@ void brt::mpi_resetrn(rn& gen)
    {
       int seconds;
       MPI_Status status;
-      MPI_Recv(&seconds,1,MPI_INT,0,MPI_TAG_RESET_RNG,MPI_COMM_WORLD,&status);
+      MPI_Recv(&seconds,1,MPI_INT,0,MPI_TAG_RESET_RNG,comm,&status);
       crn& tempgen=static_cast<crn&>(gen);
       tempgen.set_seed(seconds);
 // cout << "1) Reset seconds: " << seconds << " gen.unif:" << gen.uniform() << " gen.unif:" << gen.uniform() << endl;
@@ -634,19 +634,19 @@ void brt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv)
       nvec[i]=(unsigned int)siv[i]->n;  // on root node, this should be 0 because of newsinfo().
 // cout << "pre:" << siv[0]->n << " " << siv[1]->n << endl;
    // MPI sum
-//   MPI_Allreduce(MPI_IN_PLACE,&nvec,siv.size(),MPI_UNSIGNED,MPI_SUM,MPI_COMM_WORLD);
+//   MPI_Allreduce(MPI_IN_PLACE,&nvec,siv.size(),MPI_UNSIGNED,MPI_SUM,comm);
    if(rank==0) {
       MPI_Status status;
       unsigned int tempvec[siv.size()];
       for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Recv(&tempvec,siv.size(),MPI_UNSIGNED,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+         MPI_Recv(&tempvec,siv.size(),MPI_UNSIGNED,MPI_ANY_SOURCE,MPI_ANY_TAG,comm,&status);
          for(size_t j=0;j<siv.size();j++)
             nvec[j]+=tempvec[j];
       }
 
       MPI_Request *request=new MPI_Request[tc];
       for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Isend(&nvec,siv.size(),MPI_UNSIGNED,i,0,MPI_COMM_WORLD,&request[i-1]);
+         MPI_Isend(&nvec,siv.size(),MPI_UNSIGNED,i,0,comm,&request[i-1]);
       }
 
       // cast back to size_t
@@ -658,12 +658,12 @@ void brt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv)
    }
    else {
       MPI_Request *request=new MPI_Request;
-      MPI_Isend(&nvec,siv.size(),MPI_UNSIGNED,0,0,MPI_COMM_WORLD,request);
+      MPI_Isend(&nvec,siv.size(),MPI_UNSIGNED,0,0,comm,request);
       MPI_Status status;
       MPI_Wait(request,MPI_STATUSES_IGNORE);
       delete request;
 
-      MPI_Recv(&nvec,siv.size(),MPI_UNSIGNED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+      MPI_Recv(&nvec,siv.size(),MPI_UNSIGNED,0,MPI_ANY_TAG,comm,&status);
       // cast back to size_t
       for(size_t i=0;i<siv.size();i++)
          siv[i]->n=(size_t)nvec[i];
@@ -818,11 +818,11 @@ void brt::local_mpigetsuff(tree::tree_p nx, size_t v, size_t c, dinfo di, sinfo&
       nxid=(unsigned int)nx->nid();
 
       // Pack and send info to the slaves
-      MPI_Pack(&nxid,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,MPI_COMM_WORLD);
-      MPI_Pack(&vv,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,MPI_COMM_WORLD);
-      MPI_Pack(&cc,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,MPI_COMM_WORLD);
+      MPI_Pack(&nxid,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,comm);
+      MPI_Pack(&vv,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,comm);
+      MPI_Pack(&cc,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,comm);
       for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Isend(buffer,SIZE_UINT3,MPI_PACKED,i,tag,MPI_COMM_WORLD,&request[i-1]);
+         MPI_Isend(buffer,SIZE_UINT3,MPI_PACKED,i,tag,comm,&request[i-1]);
       }
       MPI_Waitall(tc,request,MPI_STATUSES_IGNORE);
 
@@ -856,10 +856,10 @@ void brt::local_mpigetsuff(tree::tree_p l, tree::tree_p r, dinfo di, sinfo& sil,
       nrid=(unsigned int)r->nid();
 
       // Pack and send info to the slaves
-      MPI_Pack(&nlid,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,MPI_COMM_WORLD);
-      MPI_Pack(&nrid,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,MPI_COMM_WORLD);
+      MPI_Pack(&nlid,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,comm);
+      MPI_Pack(&nrid,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,comm);
       for(size_t i=1; i<=(size_t)tc; i++) {   
-         MPI_Isend(buffer,SIZE_UINT3,MPI_PACKED,i,tag,MPI_COMM_WORLD,&request[i-1]);
+         MPI_Isend(buffer,SIZE_UINT3,MPI_PACKED,i,tag,comm,&request[i-1]);
       }
       MPI_Waitall(tc,request,MPI_STATUSES_IGNORE);
 
@@ -892,9 +892,9 @@ void brt::local_mpi_sr_suffs(sinfo& sil, sinfo& sir)
       unsigned int ln,rn;      
       for(size_t i=1; i<=(size_t)tc; i++) {
          position=0;
-         MPI_Recv(buffer,SIZE_UINT2,MPI_PACKED,MPI_ANY_SOURCE,0,MPI_COMM_WORLD,&status);
-         MPI_Unpack(buffer,SIZE_UINT2,&position,&ln,1,MPI_UNSIGNED,MPI_COMM_WORLD);
-         MPI_Unpack(buffer,SIZE_UINT2,&position,&rn,1,MPI_UNSIGNED,MPI_COMM_WORLD);
+         MPI_Recv(buffer,SIZE_UINT2,MPI_PACKED,MPI_ANY_SOURCE,0,comm,&status);
+         MPI_Unpack(buffer,SIZE_UINT2,&position,&ln,1,MPI_UNSIGNED,comm);
+         MPI_Unpack(buffer,SIZE_UINT2,&position,&rn,1,MPI_UNSIGNED,comm);
          tsil.n=(size_t)ln;
          tsir.n=(size_t)rn;
          sil+=tsil;
@@ -910,9 +910,9 @@ void brt::local_mpi_sr_suffs(sinfo& sil, sinfo& sir)
       unsigned int ln,rn;
       ln=(unsigned int)sil.n;
       rn=(unsigned int)sir.n;
-      MPI_Pack(&ln,1,MPI_UNSIGNED,buffer,SIZE_UINT2,&position,MPI_COMM_WORLD);
-      MPI_Pack(&rn,1,MPI_UNSIGNED,buffer,SIZE_UINT2,&position,MPI_COMM_WORLD);
-      MPI_Send(buffer,SIZE_UINT2,MPI_PACKED,0,0,MPI_COMM_WORLD);
+      MPI_Pack(&ln,1,MPI_UNSIGNED,buffer,SIZE_UINT2,&position,comm);
+      MPI_Pack(&rn,1,MPI_UNSIGNED,buffer,SIZE_UINT2,&position,comm);
+      MPI_Send(buffer,SIZE_UINT2,MPI_PACKED,0,0,comm);
    }
 #endif   
 }
@@ -1052,7 +1052,7 @@ void brt::cookdinfl(std::vector<double>& cdinfl)
 
    // Sum up the ni's across all MPI threads
    for(size_t i=0;i<B;i++)
-      MPI_Allreduce(MPI_IN_PLACE,&nodenums[i],1,MPI_UNSIGNED,MPI_SUM,MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE,&nodenums[i],1,MPI_UNSIGNED,MPI_SUM,comm);
 
    // Cook's D for each obs xx
    unsigned int ni;
@@ -1090,7 +1090,7 @@ void brt::kldivinfl(std::vector<double>& klinfl)
 
    // Sum up the ni's across all MPI threads
    for(size_t i=0;i<B;i++)
-      MPI_Allreduce(MPI_IN_PLACE,&nodenums[i],1,MPI_UNSIGNED,MPI_SUM,MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE,&nodenums[i],1,MPI_UNSIGNED,MPI_SUM,comm);
 
    // set KL value based on number of observations minus 1.
    unsigned int ni;
@@ -1248,14 +1248,14 @@ void brt::bd(rn& gen)
 //        cout << "accept birth " << lalpha << endl;
          const int tag=MPI_TAG_BD_BIRTH_VC_ACCEPT;
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,tag,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,tag,comm,&request[i-1]);
          }
       }
       else { //transmit reject over MPI
 //        cout << "reject birth " << lalpha << endl;
          const int tag=MPI_TAG_BD_BIRTH_VC_REJECT;
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,tag,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,tag,comm,&request[i-1]);
          }
       }
 #else
@@ -1308,14 +1308,14 @@ void brt::bd(rn& gen)
 //        cout << "accept death " << lalpha << endl;
          const int tag=MPI_TAG_BD_DEATH_LR_ACCEPT;
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,tag,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,tag,comm,&request[i-1]);
          }
       }
       else { //transmit reject over MPI
 //        cout << "reject death " << lalpha << endl;
          const int tag=MPI_TAG_BD_DEATH_LR_REJECT;
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,tag,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,tag,comm,&request[i-1]);
          }
       }
 #else
@@ -1431,7 +1431,7 @@ void brt::drawvec_mpislave(rn& gen)
 
    // Structural/topological proposal(s)
    // MPI receive the topological proposal type and nlid and nrid if applicable.
-   MPI_Recv(buffer,SIZE_UINT3,MPI_PACKED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+   MPI_Recv(buffer,SIZE_UINT3,MPI_PACKED,0,MPI_ANY_TAG,comm,&status);
    sinfo& tsil = *newsinfo();
    sinfo& tsir = *newsinfo();
    vxd theta0(k);
@@ -1439,26 +1439,26 @@ void brt::drawvec_mpislave(rn& gen)
    if(status.MPI_TAG==MPI_TAG_BD_BIRTH_VC) {
       unsigned int nxid,v,c;
       tree::tree_p nx;
-      MPI_Unpack(buffer,SIZE_UINT3,&position,&nxid,1,MPI_UNSIGNED,MPI_COMM_WORLD);
-      MPI_Unpack(buffer,SIZE_UINT3,&position,&v,1,MPI_UNSIGNED,MPI_COMM_WORLD);
-      MPI_Unpack(buffer,SIZE_UINT3,&position,&c,1,MPI_UNSIGNED,MPI_COMM_WORLD);
+      MPI_Unpack(buffer,SIZE_UINT3,&position,&nxid,1,MPI_UNSIGNED,comm);
+      MPI_Unpack(buffer,SIZE_UINT3,&position,&v,1,MPI_UNSIGNED,comm);
+      MPI_Unpack(buffer,SIZE_UINT3,&position,&c,1,MPI_UNSIGNED,comm);
       nx=t.getptr((size_t)nxid);
       getsuff(nx,(size_t)v,(size_t)c,tsil,tsir);
       MPI_Status status2;
-      MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status2);
+      MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,comm,&status2);
       if(status2.MPI_TAG==MPI_TAG_BD_BIRTH_VC_ACCEPT) t.birthp(nx,(size_t)v,(size_t)c,theta0,theta0); //accept birth
       //else reject, for which we do nothing.
    }
    else if(status.MPI_TAG==MPI_TAG_BD_DEATH_LR) {
       unsigned int nlid,nrid;
       tree::tree_p nl,nr;
-      MPI_Unpack(buffer,SIZE_UINT3,&position,&nlid,1,MPI_UNSIGNED,MPI_COMM_WORLD);
-      MPI_Unpack(buffer,SIZE_UINT3,&position,&nrid,1,MPI_UNSIGNED,MPI_COMM_WORLD);
+      MPI_Unpack(buffer,SIZE_UINT3,&position,&nlid,1,MPI_UNSIGNED,comm);
+      MPI_Unpack(buffer,SIZE_UINT3,&position,&nrid,1,MPI_UNSIGNED,comm);
       nl=t.getptr((size_t)nlid);
       nr=t.getptr((size_t)nrid);
       getsuff(nl,nr,tsil,tsir);
       MPI_Status status2;
-      MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status2);
+      MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,comm,&status2);
       if(status2.MPI_TAG==MPI_TAG_BD_DEATH_LR_ACCEPT) t.deathp(nl->getp(),theta0); //accept death
       //else reject, for which we do nothing.
    }
@@ -1484,19 +1484,19 @@ void brt::drawvec_mpislave(rn& gen)
          std::vector<sinfo*>& sivold = newsinfovec();
          std::vector<sinfo*>& sivnew = newsinfovec();
          pertnode = intnodes[pertdx];
-         MPI_Recv(buffer,SIZE_UINT3,MPI_PACKED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+         MPI_Recv(buffer,SIZE_UINT3,MPI_PACKED,0,MPI_ANY_TAG,comm,&status);
          if(status.MPI_TAG==MPI_TAG_PERTCV)
          {
             size_t oldc = pertnode->getc();
             unsigned int propcint;
             position=0;
-            MPI_Unpack(buffer,SIZE_UINT1,&position,&propcint,1,MPI_UNSIGNED,MPI_COMM_WORLD);
+            MPI_Unpack(buffer,SIZE_UINT1,&position,&propcint,1,MPI_UNSIGNED,comm);
             size_t propc=(size_t)propcint;
             pertnode->setc(propc);
             tree::npv bnv;
             getpertsuff(pertnode,bnv,oldc,sivold,sivnew);
             MPI_Status status2;
-            MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status2);
+            MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,comm,&status2);
             if(status2.MPI_TAG==MPI_TAG_PERTCV_ACCEPT) pertnode->setc(propc); //accept new cutpoint
             //else reject, for which we do nothing.
          }
@@ -1508,22 +1508,22 @@ void brt::drawvec_mpislave(rn& gen)
             unsigned int propcint;
             unsigned int propvint;
             position=0;
-            mpi_update_norm_cormat(rank,tc,pertnode,*xi,(*mi.corv)[oldv],chv_lwr,chv_upr);
-            MPI_Recv(buffer,SIZE_UINT3,MPI_PACKED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
-            MPI_Unpack(buffer,SIZE_UINT3,&position,&propcint,1,MPI_UNSIGNED,MPI_COMM_WORLD);
-            MPI_Unpack(buffer,SIZE_UINT3,&position,&propvint,1,MPI_UNSIGNED,MPI_COMM_WORLD);
-            MPI_Unpack(buffer,SIZE_UINT3,&position,&didswap,1,MPI_CXX_BOOL,MPI_COMM_WORLD);
+            mpi_update_norm_cormat(rank,tc,pertnode,*xi,(*mi.corv)[oldv],chv_lwr,chv_upr,comm);
+            MPI_Recv(buffer,SIZE_UINT3,MPI_PACKED,0,MPI_ANY_TAG,comm,&status);
+            MPI_Unpack(buffer,SIZE_UINT3,&position,&propcint,1,MPI_UNSIGNED,comm);
+            MPI_Unpack(buffer,SIZE_UINT3,&position,&propvint,1,MPI_UNSIGNED,comm);
+            MPI_Unpack(buffer,SIZE_UINT3,&position,&didswap,1,MPI_CXX_BOOL,comm);
             size_t propc=(size_t)propcint;
             size_t propv=(size_t)propvint;
             pertnode->setc(propc);
             pertnode->setv(propv);
             if(didswap)
                pertnode->swaplr();
-            mpi_update_norm_cormat(rank,tc,pertnode,*xi,(*mi.corv)[propv],chv_lwr,chv_upr);
+            mpi_update_norm_cormat(rank,tc,pertnode,*xi,(*mi.corv)[propv],chv_lwr,chv_upr,comm);
             tree::npv bnv;
             getchgvsuff(pertnode,bnv,oldc,oldv,didswap,sivold,sivnew);
             MPI_Status status2;
-            MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status2);
+            MPI_Recv(buffer,0,MPI_PACKED,0,MPI_ANY_TAG,comm,&status2);
             if(status2.MPI_TAG==MPI_TAG_PERTCHGV_ACCEPT) { //accept change var and pert
                pertnode->setc(propc);
                pertnode->setv(propv);
@@ -1611,14 +1611,14 @@ void brt::bd_vec(rn& gen)
 //        cout << "accept birth " << lalpha << endl;
          const int tag=MPI_TAG_BD_BIRTH_VC_ACCEPT;
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,tag,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,tag,comm,&request[i-1]);
          }
       }
       else { //transmit reject over MPI
 //        cout << "reject birth " << lalpha << endl;
          const int tag=MPI_TAG_BD_BIRTH_VC_REJECT;
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,tag,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,tag,comm,&request[i-1]);
          }
       }
 #else
@@ -1672,14 +1672,14 @@ void brt::bd_vec(rn& gen)
 //        cout << "accept death " << lalpha << endl;
          const int tag=MPI_TAG_BD_DEATH_LR_ACCEPT;
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,tag,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,tag,comm,&request[i-1]);
          }
       }
       else { //transmit reject over MPI
 //        cout << "reject death " << lalpha << endl;
          const int tag=MPI_TAG_BD_DEATH_LR_REJECT;
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,tag,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,tag,comm,&request[i-1]);
          }
       }
 #else
@@ -2048,14 +2048,14 @@ void brt::pertcv(rn& gen)
 #ifdef _OPENMPI 
       MPI_Request *request = new MPI_Request[tc];
       for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCHGV,MPI_COMM_WORLD,&request[i-1]);
+         MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCHGV,comm,&request[i-1]);
       }
       std::vector<double> chgvrow;
       chgvrow=(*mi.corv)[oldv]; 
       MPI_Waitall(tc,request,MPI_STATUSES_IGNORE);
       delete[] request;
 
-      mpi_update_norm_cormat(rank,tc,pertnode,*xi,chgvrow,chv_lwr,chv_upr);
+      mpi_update_norm_cormat(rank,tc,pertnode,*xi,chgvrow,chv_lwr,chv_upr,comm);
       newv=getchgvfromrow(oldv,chgvrow,gen);
 #else
       std::vector<std::vector<double> > chgv;
@@ -2084,11 +2084,11 @@ void brt::pertcv(rn& gen)
       request = new MPI_Request[tc];
       char buffer[SIZE_UINT3];
       int position=0;
-      MPI_Pack(&propcint,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,MPI_COMM_WORLD);
-      MPI_Pack(&propvint,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,MPI_COMM_WORLD);
-      MPI_Pack(&didswap,1,MPI_CXX_BOOL,buffer,SIZE_UINT3,&position,MPI_COMM_WORLD);
+      MPI_Pack(&propcint,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,comm);
+      MPI_Pack(&propvint,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,comm);
+      MPI_Pack(&didswap,1,MPI_CXX_BOOL,buffer,SIZE_UINT3,&position,comm);
       for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Isend(buffer,SIZE_UINT3,MPI_PACKED,i,MPI_TAG_PERTCHGV,MPI_COMM_WORLD,&request[i-1]);
+         MPI_Isend(buffer,SIZE_UINT3,MPI_PACKED,i,MPI_TAG_PERTCHGV,comm,&request[i-1]);
       }
       std::vector<double> chgvrownew;
       chgvrownew=(*mi.corv)[newv];
@@ -2096,7 +2096,7 @@ void brt::pertcv(rn& gen)
       MPI_Waitall(tc,request,MPI_STATUSES_IGNORE);
       delete[] request;
 
-      mpi_update_norm_cormat(rank,tc,pertnode,*xi,chgvrownew,chv_lwr,chv_upr);
+      mpi_update_norm_cormat(rank,tc,pertnode,*xi,chgvrownew,chv_lwr,chv_upr,comm);
       if(chgvrownew[oldv]==0.0)
          cout << "Proposal newv cannot return to oldv!  This is not possible!" << endl;
 
@@ -2148,12 +2148,12 @@ void brt::pertcv(rn& gen)
          pertnode->setc(newc); //because the call to getchgvsuff changes it back to oldc to calc the old lil
 #ifdef _OPENMPI
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCHGV_ACCEPT,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCHGV_ACCEPT,comm,&request[i-1]);
          }
       }
       else { //transmit reject over MPI
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCHGV_REJECT,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCHGV_REJECT,comm,&request[i-1]);
          }
       }
 #else
@@ -2191,9 +2191,9 @@ void brt::pertcv(rn& gen)
          MPI_Request *request = new MPI_Request[tc];
          char buffer[SIZE_UINT1];
          int position=0;
-         MPI_Pack(&propcint,1,MPI_UNSIGNED,buffer,SIZE_UINT1,&position,MPI_COMM_WORLD);
+         MPI_Pack(&propcint,1,MPI_UNSIGNED,buffer,SIZE_UINT1,&position,comm);
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(buffer,SIZE_UINT1,MPI_PACKED,i,MPI_TAG_PERTCV,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(buffer,SIZE_UINT1,MPI_PACKED,i,MPI_TAG_PERTCV,comm,&request[i-1]);
          }
 #endif
       oldai=(int)(floor(propc-mi.pertalpha*(U-L+1)/2.0));
@@ -2239,12 +2239,12 @@ void brt::pertcv(rn& gen)
          pertnode->setc(propc); //because the call to getpertsuff changes it back to oldc to calc the old lil.
 #ifdef _OPENMPI
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCV_ACCEPT,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCV_ACCEPT,comm,&request[i-1]);
          }
       }
       else { //transmit reject over MPI
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCV_REJECT,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCV_REJECT,comm,&request[i-1]);
          }
       }
 #else
@@ -2272,7 +2272,7 @@ bool brt::rot(tree::tree_p tnew, tree& x, rn& gen)
    if(rank==0) {
       const int tag=MPI_TAG_ROTATE;
       for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Isend(NULL,0,MPI_PACKED,i,tag,MPI_COMM_WORLD,&request[i-1]);
+         MPI_Isend(NULL,0,MPI_PACKED,i,tag,comm,&request[i-1]);
       }
    }
    #endif

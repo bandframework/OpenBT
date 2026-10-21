@@ -112,13 +112,20 @@ public:
    };
    //--------------------
    //constructors/destructors
-   brt():t(0.0),tp(),xi(0),ci(),di(0),mi(),tc(1),rank(0) {}
+   brt():t(0.0),tp(),xi(0),ci(),di(0),mi(),tc(1),rank(0) {
+#ifdef _OPENMPI
+      comm=MPI_COMM_WORLD;
+#endif
+   }
    //brt(size_t ik):t(vxd::Zero(ik)),tp(),xi(0),ci(),di(0),mi(),tc(1),rank(0) {}
    virtual ~brt() { if(mi.varcount) delete[] mi.varcount; }
    //--------------------
    //methods
    void settc(int tc) {this->tc = tc;}  // this is numslaves for MPI, or numthreads for OPEN_MP
    void setmpirank(int rank) {this->rank = rank;}  //only needed for MPI
+#ifdef _OPENMPI
+   void setmpicomm(MPI_Comm comm) {this->comm = comm;}  //only needed for MPI
+#endif
    void setmpicvrange(int* lwr, int* upr) {this->chv_lwr=lwr; this->chv_upr=upr;} //only needed for MPI
    void setxi(xinfo *xi) {this->xi=xi; this->ncp1=2.0;
                           for(size_t i=0;i<(*xi).size();i++) 
@@ -224,6 +231,10 @@ protected:
    int tc;
    //slave rank for MPI
    int rank;
+#ifdef _OPENMPI
+   //communicator for this model's master/slave group (MPI_COMM_WORLD unless set)
+   MPI_Comm comm;
+#endif
    //vectors of length #slave nodes (tc) describing which variables each node handles when
    //updating mi.corv during an MPI change-of-variable proposal.
    int* chv_lwr;

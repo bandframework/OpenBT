@@ -227,21 +227,21 @@ void updatecormat(tree::tree_p pertnode, xinfo& xi, std::vector<std::vector<doub
    }
 }
 
-void mpi_update_norm_cormat(size_t rank, size_t tc, tree::tree_p pertnode, xinfo& xi, std::vector<double>& chgvrow, int* chv_lwr, int* chv_upr)
-{
 #ifdef _OPENMPI
+void mpi_update_norm_cormat(size_t rank, size_t tc, tree::tree_p pertnode, xinfo& xi, std::vector<double>& chgvrow, int* chv_lwr, int* chv_upr, MPI_Comm comm)
+{
    size_t oldv=pertnode->getv();
 
    if(rank==0) {
       MPI_Status status;
       double cumsum=0.0;
 
-      MPI_Allreduce(MPI_IN_PLACE,&cumsum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE,&cumsum,1,MPI_DOUBLE,MPI_SUM,comm);
 
       for(size_t i=1;i<=tc;i++) {
          size_t slavenumvars=(size_t) (chv_upr[i]-chv_lwr[i]);
          if(slavenumvars>0) {
-            MPI_Recv(&chgvrow[chv_lwr[i]],slavenumvars,MPI_DOUBLE,i,MPI_TAG_PERTCHGV_MATRIX_UPDATE,MPI_COMM_WORLD,&status);
+            MPI_Recv(&chgvrow[chv_lwr[i]],slavenumvars,MPI_DOUBLE,i,MPI_TAG_PERTCHGV_MATRIX_UPDATE,comm,&status);
          }
       }
    }
@@ -271,7 +271,7 @@ void mpi_update_norm_cormat(size_t rank, size_t tc, tree::tree_p pertnode, xinfo
       }
 
       //parallel update of cumulative sums for denominator in matrix row update
-      MPI_Allreduce(MPI_IN_PLACE,&cumsum,1,MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+      MPI_Allreduce(MPI_IN_PLACE,&cumsum,1,MPI_DOUBLE,MPI_SUM,comm);
 
       if(slavenumvars>0) {
          //update our part of the vector
@@ -279,13 +279,13 @@ void mpi_update_norm_cormat(size_t rank, size_t tc, tree::tree_p pertnode, xinfo
             temp_oldv_var[i]/=cumsum;
 
          //send our part of the vector back to root
-         MPI_Isend(temp_oldv_var,slavenumvars,MPI_DOUBLE,0,MPI_TAG_PERTCHGV_MATRIX_UPDATE,MPI_COMM_WORLD,&request);
+         MPI_Isend(temp_oldv_var,slavenumvars,MPI_DOUBLE,0,MPI_TAG_PERTCHGV_MATRIX_UPDATE,comm,&request);
          MPI_Wait(&request,MPI_STATUSES_IGNORE);
          delete[] temp_oldv_var;
       }
    }
-#endif
 }
+#endif
 
 //--------------------------------------------------
 // renormalize the correlation matrix so that the probability of row sums to 1.

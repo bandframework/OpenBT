@@ -274,19 +274,19 @@ void mxbrt::local_mpi_sr_suffs(sinfo& sil, sinfo& sir){
          
         for(size_t i=1; i<=(size_t)tc; i++) {
             position=0;
-            MPI_Recv(buffer,buffer_size,MPI_PACKED,MPI_ANY_SOURCE,0,MPI_COMM_WORLD,&status);
-            MPI_Unpack(buffer,buffer_size,&position,&ln,1,MPI_UNSIGNED,MPI_COMM_WORLD);
-            MPI_Unpack(buffer,buffer_size,&position,&rn,1,MPI_UNSIGNED,MPI_COMM_WORLD);
-            MPI_Unpack(buffer,buffer_size,&position,&sumffw_larray,k*k,MPI_DOUBLE,MPI_COMM_WORLD);
-            MPI_Unpack(buffer,buffer_size,&position,&sumffw_rarray,k*k,MPI_DOUBLE,MPI_COMM_WORLD);
-            MPI_Unpack(buffer,buffer_size,&position,&sumfyw_larray,k,MPI_DOUBLE,MPI_COMM_WORLD);
-            MPI_Unpack(buffer,buffer_size,&position,&sumfyw_rarray,k,MPI_DOUBLE,MPI_COMM_WORLD);
-            MPI_Unpack(buffer,buffer_size,&position,&tsil.sumyyw,1,MPI_DOUBLE,MPI_COMM_WORLD);
-            MPI_Unpack(buffer,buffer_size,&position,&tsir.sumyyw,1,MPI_DOUBLE,MPI_COMM_WORLD);
+            MPI_Recv(buffer,buffer_size,MPI_PACKED,MPI_ANY_SOURCE,0,comm,&status);
+            MPI_Unpack(buffer,buffer_size,&position,&ln,1,MPI_UNSIGNED,comm);
+            MPI_Unpack(buffer,buffer_size,&position,&rn,1,MPI_UNSIGNED,comm);
+            MPI_Unpack(buffer,buffer_size,&position,&sumffw_larray,k*k,MPI_DOUBLE,comm);
+            MPI_Unpack(buffer,buffer_size,&position,&sumffw_rarray,k*k,MPI_DOUBLE,comm);
+            MPI_Unpack(buffer,buffer_size,&position,&sumfyw_larray,k,MPI_DOUBLE,comm);
+            MPI_Unpack(buffer,buffer_size,&position,&sumfyw_rarray,k,MPI_DOUBLE,comm);
+            MPI_Unpack(buffer,buffer_size,&position,&tsil.sumyyw,1,MPI_DOUBLE,comm);
+            MPI_Unpack(buffer,buffer_size,&position,&tsir.sumyyw,1,MPI_DOUBLE,comm);
             if(nsprior){
                 //Unpack prior precision if specified
-                MPI_Unpack(buffer,buffer_size,&position,&sump_larray,k,MPI_DOUBLE,MPI_COMM_WORLD);
-                MPI_Unpack(buffer,buffer_size,&position,&sump_rarray,k,MPI_DOUBLE,MPI_COMM_WORLD);
+                MPI_Unpack(buffer,buffer_size,&position,&sump_larray,k,MPI_DOUBLE,comm);
+                MPI_Unpack(buffer,buffer_size,&position,&sump_rarray,k,MPI_DOUBLE,comm);
 
                 //convert back to a vector
                 array_to_vector(tsil.sump,&sump_larray[0]);    
@@ -334,20 +334,20 @@ void mxbrt::local_mpi_sr_suffs(sinfo& sil, sinfo& sir){
 
     ln=(unsigned int)msil.n;
     rn=(unsigned int)msir.n;
-    MPI_Pack(&ln,1,MPI_UNSIGNED,buffer,buffer_size,&position,MPI_COMM_WORLD);
-    MPI_Pack(&rn,1,MPI_UNSIGNED,buffer,buffer_size,&position,MPI_COMM_WORLD);
-    MPI_Pack(&sumffw_larray,k*k,MPI_DOUBLE,buffer,buffer_size,&position,MPI_COMM_WORLD);
-    MPI_Pack(&sumffw_rarray,k*k,MPI_DOUBLE,buffer,buffer_size,&position,MPI_COMM_WORLD);
-    MPI_Pack(&sumfyw_larray,k,MPI_DOUBLE,buffer,buffer_size,&position,MPI_COMM_WORLD);
-    MPI_Pack(&sumfyw_rarray,k,MPI_DOUBLE,buffer,buffer_size,&position,MPI_COMM_WORLD);
-    MPI_Pack(&msil.sumyyw,1,MPI_DOUBLE,buffer,buffer_size,&position,MPI_COMM_WORLD);
-    MPI_Pack(&msir.sumyyw,1,MPI_DOUBLE,buffer,buffer_size,&position,MPI_COMM_WORLD);
+    MPI_Pack(&ln,1,MPI_UNSIGNED,buffer,buffer_size,&position,comm);
+    MPI_Pack(&rn,1,MPI_UNSIGNED,buffer,buffer_size,&position,comm);
+    MPI_Pack(&sumffw_larray,k*k,MPI_DOUBLE,buffer,buffer_size,&position,comm);
+    MPI_Pack(&sumffw_rarray,k*k,MPI_DOUBLE,buffer,buffer_size,&position,comm);
+    MPI_Pack(&sumfyw_larray,k,MPI_DOUBLE,buffer,buffer_size,&position,comm);
+    MPI_Pack(&sumfyw_rarray,k,MPI_DOUBLE,buffer,buffer_size,&position,comm);
+    MPI_Pack(&msil.sumyyw,1,MPI_DOUBLE,buffer,buffer_size,&position,comm);
+    MPI_Pack(&msir.sumyyw,1,MPI_DOUBLE,buffer,buffer_size,&position,comm);
     if(nsprior){
-        MPI_Pack(&sump_larray,k,MPI_DOUBLE,buffer,buffer_size,&position,MPI_COMM_WORLD);
-        MPI_Pack(&sump_rarray,k,MPI_DOUBLE,buffer,buffer_size,&position,MPI_COMM_WORLD);
+        MPI_Pack(&sump_larray,k,MPI_DOUBLE,buffer,buffer_size,&position,comm);
+        MPI_Pack(&sump_rarray,k,MPI_DOUBLE,buffer,buffer_size,&position,comm);
     }
 
-    MPI_Send(buffer,buffer_size,MPI_PACKED,0,0,MPI_COMM_WORLD);
+    MPI_Send(buffer,buffer_size,MPI_PACKED,0,0,comm);
    }
 #endif   
 }
@@ -388,9 +388,9 @@ void mxbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv){
     }
 
     // MPI sum
-    // MPI_Allreduce(MPI_IN_PLACE,&nvec,siv.size(),MPI_UNSIGNED,MPI_SUM,MPI_COMM_WORLD);
-    // MPI_Allreduce(MPI_IN_PLACE,&sumwvec,siv.size(),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
-    // MPI_Allreduce(MPI_IN_PLACE,&sumwyvec,siv.size(),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+    // MPI_Allreduce(MPI_IN_PLACE,&nvec,siv.size(),MPI_UNSIGNED,MPI_SUM,comm);
+    // MPI_Allreduce(MPI_IN_PLACE,&sumwvec,siv.size(),MPI_DOUBLE,MPI_SUM,comm);
+    // MPI_Allreduce(MPI_IN_PLACE,&sumwyvec,siv.size(),MPI_DOUBLE,MPI_SUM,comm);
 
     if(rank==0) {
         //std::cout << "Enter with rank 0 ---- " << std::endl;
@@ -403,14 +403,14 @@ void mxbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv){
 
         // receive nvec, update and send back.
         for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Recv(&tempnvec,siv.size(),MPI_UNSIGNED,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+            MPI_Recv(&tempnvec,siv.size(),MPI_UNSIGNED,MPI_ANY_SOURCE,MPI_ANY_TAG,comm,&status);
             for(size_t j=0;j<siv.size();j++){
                 nvec[j]+=tempnvec[j];
             }
         }
         MPI_Request *request=new MPI_Request[tc];
         for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(&nvec,siv.size(),MPI_UNSIGNED,i,0,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(&nvec,siv.size(),MPI_UNSIGNED,i,0,comm,&request[i-1]);
         }
         // cast back to mxsi
         for(size_t i=0;i<siv.size();i++) {
@@ -423,13 +423,13 @@ void mxbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv){
 
         // receive sumyywvec, update and send back.
         for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Recv(&tempsumyywvec,siv.size(),MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+            MPI_Recv(&tempsumyywvec,siv.size(),MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,comm,&status);
             for(size_t j=0;j<siv.size();j++)
                 sumyywvec[j]+=tempsumyywvec[j];
         }
         request=new MPI_Request[tc];
         for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(&sumyywvec,siv.size(),MPI_DOUBLE,i,0,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(&sumyywvec,siv.size(),MPI_DOUBLE,i,0,comm,&request[i-1]);
         }
         // cast back to mxsi
         for(size_t i=0;i<siv.size();i++) {
@@ -442,7 +442,7 @@ void mxbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv){
 
         // receive sumfywvec, update and send back.
         for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Recv(&tempsumfywvec,k*siv.size(),MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+            MPI_Recv(&tempsumfywvec,k*siv.size(),MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,comm,&status);
             for(size_t j=0;j<k*siv.size();j++){
                 sumfywvec[j]+=tempsumfywvec[j]; //add temp vector to the sufficient stat
             }
@@ -451,7 +451,7 @@ void mxbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv){
         
         request=new MPI_Request[tc];
         for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(&sumfywvec,k*siv.size(),MPI_DOUBLE,i,0,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(&sumfywvec,k*siv.size(),MPI_DOUBLE,i,0,comm,&request[i-1]);
         }
         
         // cast back to mxsi
@@ -472,14 +472,14 @@ void mxbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv){
 
         // receive sumffwvec, update and send back.
         for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Recv(&tempsumffwvec,k*k*siv.size(),MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+            MPI_Recv(&tempsumffwvec,k*k*siv.size(),MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,comm,&status);
             for(size_t j=0;j<(k*k*siv.size());j++){
                 sumffwvec[j]+=tempsumffwvec[j];
             }
         }
         request=new MPI_Request[tc];
         for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(&sumffwvec,k*k*siv.size(),MPI_DOUBLE,i,0,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(&sumffwvec,k*k*siv.size(),MPI_DOUBLE,i,0,comm,&request[i-1]);
         }
         // cast back to mxsi
         Eigen::MatrixXd tempsumffw(k,k); //temp matrix
@@ -499,14 +499,14 @@ void mxbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv){
         if(nsprior){
             //receive sump, update, and send back
             for(size_t i=1; i<=(size_t)tc; i++) {
-                MPI_Recv(&tempsumpvec,k*siv.size(),MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+                MPI_Recv(&tempsumpvec,k*siv.size(),MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,comm,&status);
                 for(size_t j=0;j<k*siv.size();j++){
                     sumpvec[j]+=tempsumpvec[j];
                 }
             }
             request=new MPI_Request[tc];
             for(size_t i=1; i<=(size_t)tc; i++) {
-                MPI_Isend(&sumpvec,k*siv.size(),MPI_DOUBLE,i,0,MPI_COMM_WORLD,&request[i-1]);
+                MPI_Isend(&sumpvec,k*siv.size(),MPI_DOUBLE,i,0,comm,&request[i-1]);
             }
             // cast back to mxsi
             Eigen::VectorXd tempsump(k); //temp matrix
@@ -530,14 +530,14 @@ void mxbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv){
         MPI_Status status;
 
         // send/recv nvec      
-        MPI_Isend(&nvec,siv.size(),MPI_UNSIGNED,0,0,MPI_COMM_WORLD,request);
+        MPI_Isend(&nvec,siv.size(),MPI_UNSIGNED,0,0,comm,request);
         MPI_Wait(request,MPI_STATUSES_IGNORE);
         delete request;
-        MPI_Recv(&nvec,siv.size(),MPI_UNSIGNED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+        MPI_Recv(&nvec,siv.size(),MPI_UNSIGNED,0,MPI_ANY_TAG,comm,&status);
 
         // send sumyywvec, update nvec, receive sumyywvec
         request=new MPI_Request;
-        MPI_Isend(&sumyywvec,siv.size(),MPI_DOUBLE,0,0,MPI_COMM_WORLD,request);
+        MPI_Isend(&sumyywvec,siv.size(),MPI_DOUBLE,0,0,comm,request);
         // cast back to mxsi
         for(size_t i=0;i<siv.size();i++) {
             mxsinfo* mxsi=static_cast<mxsinfo*>(siv[i]);
@@ -545,11 +545,11 @@ void mxbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv){
         }
         MPI_Wait(request,MPI_STATUSES_IGNORE);
         delete request;
-        MPI_Recv(&sumyywvec,siv.size(),MPI_DOUBLE,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+        MPI_Recv(&sumyywvec,siv.size(),MPI_DOUBLE,0,MPI_ANY_TAG,comm,&status);
 
         // send sumfywvec, update sumyywvec, receive sumfywvec
         request=new MPI_Request;
-        MPI_Isend(&sumfywvec,k*siv.size(),MPI_DOUBLE,0,0,MPI_COMM_WORLD,request);
+        MPI_Isend(&sumfywvec,k*siv.size(),MPI_DOUBLE,0,0,comm,request);
         // cast back to mxsi
         for(size_t i=0;i<siv.size();i++) {
             mxsinfo* mxsi=static_cast<mxsinfo*>(siv[i]);
@@ -558,11 +558,11 @@ void mxbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv){
         }
         MPI_Wait(request,MPI_STATUSES_IGNORE);
         delete request;
-        MPI_Recv(&sumfywvec,k*siv.size(),MPI_DOUBLE,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+        MPI_Recv(&sumfywvec,k*siv.size(),MPI_DOUBLE,0,MPI_ANY_TAG,comm,&status);
 
         // send sumffwvec, update sumfywvec, receive sumffwvec
         request=new MPI_Request;
-        MPI_Isend(&sumffwvec,k*k*siv.size(),MPI_DOUBLE,0,0,MPI_COMM_WORLD,request);
+        MPI_Isend(&sumffwvec,k*k*siv.size(),MPI_DOUBLE,0,0,comm,request);
         // cast back to mxsi
         Eigen::VectorXd tempsumfyw(k); //temp vector
         for(size_t i=0;i<siv.size();i++) {
@@ -578,12 +578,12 @@ void mxbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv){
         }
         MPI_Wait(request,MPI_STATUSES_IGNORE);
         delete request;
-        MPI_Recv(&sumffwvec,k*k*siv.size(),MPI_DOUBLE,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+        MPI_Recv(&sumffwvec,k*k*siv.size(),MPI_DOUBLE,0,MPI_ANY_TAG,comm,&status);
 
         if(nsprior){
             // send sumpvec 
             request=new MPI_Request;
-            MPI_Isend(&sumpvec,k*siv.size(),MPI_DOUBLE,0,0,MPI_COMM_WORLD,request);
+            MPI_Isend(&sumpvec,k*siv.size(),MPI_DOUBLE,0,0,comm,request);
         }
 
         // update sumffwvec
@@ -603,7 +603,7 @@ void mxbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv){
             //receive and update sumpvec if using discrepancy
             MPI_Wait(request,MPI_STATUSES_IGNORE);
             delete request;
-            MPI_Recv(&sumpvec,k*siv.size(),MPI_DOUBLE,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+            MPI_Recv(&sumpvec,k*siv.size(),MPI_DOUBLE,0,MPI_ANY_TAG,comm,&status);
 
             //cast sumpvec back to mxsi
             Eigen::VectorXd tempsump(k); //temp vector
@@ -761,13 +761,13 @@ void mxbrt::local_mpi_reduce_getsumr2(double &sumr2, int &n)
         
         //Receive, Send, and update sr2
         for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Recv(&tempsr2,1,MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+            MPI_Recv(&tempsr2,1,MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,comm,&status);
             sr2 += tempsr2;
         }
 
         MPI_Request *request=new MPI_Request[tc];
         for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(&sr2,1,MPI_DOUBLE,i,0,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(&sr2,1,MPI_DOUBLE,i,0,comm,&request[i-1]);
         }
 
         //set sumr2 to the value
@@ -778,13 +778,13 @@ void mxbrt::local_mpi_reduce_getsumr2(double &sumr2, int &n)
 
         //Receive, Send and update nval
         for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Recv(&tempnval,1,MPI_UNSIGNED,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+            MPI_Recv(&tempnval,1,MPI_UNSIGNED,MPI_ANY_SOURCE,MPI_ANY_TAG,comm,&status);
             nval += tempnval;
         }
 
         request=new MPI_Request[tc];
         for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(&nval,1,MPI_UNSIGNED,i,0,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(&nval,1,MPI_UNSIGNED,i,0,comm,&request[i-1]);
         }
 
         //set nval to the value
@@ -799,15 +799,15 @@ void mxbrt::local_mpi_reduce_getsumr2(double &sumr2, int &n)
         MPI_Request *request=new MPI_Request;
         MPI_Status status;
 
-        MPI_Isend(&sr2,1,MPI_DOUBLE,0,0,MPI_COMM_WORLD,request);
+        MPI_Isend(&sr2,1,MPI_DOUBLE,0,0,comm,request);
         MPI_Wait(request,MPI_STATUSES_IGNORE);
         delete request;
 
-        MPI_Recv(&sr2,1,MPI_DOUBLE,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+        MPI_Recv(&sr2,1,MPI_DOUBLE,0,MPI_ANY_TAG,comm,&status);
         
         //send nval
         request=new MPI_Request[tc];
-        MPI_Isend(&nval,1,MPI_UNSIGNED,0,0,MPI_COMM_WORLD,request);
+        MPI_Isend(&nval,1,MPI_UNSIGNED,0,0,comm,request);
         
         //update sumr2 to the value
         sumr2 = sr2;
@@ -816,7 +816,7 @@ void mxbrt::local_mpi_reduce_getsumr2(double &sumr2, int &n)
         delete request;
 
         //Receive nval
-        MPI_Recv(&nval,1,MPI_UNSIGNED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+        MPI_Recv(&nval,1,MPI_UNSIGNED,0,MPI_ANY_TAG,comm,&status);
         
         //set sumr2 to the value
         n = nval;

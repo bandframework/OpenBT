@@ -95,11 +95,11 @@ void sbrt::local_mpi_sr_suffs(sinfo& sil, sinfo& sir)
       unsigned int ln,rn;
       for(size_t i=1; i<=(size_t)tc; i++) {
          position=0;
-         MPI_Recv(buffer,SIZE_UINT4,MPI_PACKED,MPI_ANY_SOURCE,0,MPI_COMM_WORLD,&status);
-         MPI_Unpack(buffer,SIZE_UINT4,&position,&ln,1,MPI_UNSIGNED,MPI_COMM_WORLD);
-         MPI_Unpack(buffer,SIZE_UINT4,&position,&rn,1,MPI_UNSIGNED,MPI_COMM_WORLD);
-         MPI_Unpack(buffer,SIZE_UINT4,&position,&tsil.sumy2,1,MPI_DOUBLE,MPI_COMM_WORLD);
-         MPI_Unpack(buffer,SIZE_UINT4,&position,&tsir.sumy2,1,MPI_DOUBLE,MPI_COMM_WORLD);
+         MPI_Recv(buffer,SIZE_UINT4,MPI_PACKED,MPI_ANY_SOURCE,0,comm,&status);
+         MPI_Unpack(buffer,SIZE_UINT4,&position,&ln,1,MPI_UNSIGNED,comm);
+         MPI_Unpack(buffer,SIZE_UINT4,&position,&rn,1,MPI_UNSIGNED,comm);
+         MPI_Unpack(buffer,SIZE_UINT4,&position,&tsil.sumy2,1,MPI_DOUBLE,comm);
+         MPI_Unpack(buffer,SIZE_UINT4,&position,&tsir.sumy2,1,MPI_DOUBLE,comm);
 
          tsil.n=(size_t)ln;
          tsir.n=(size_t)rn;
@@ -117,12 +117,12 @@ void sbrt::local_mpi_sr_suffs(sinfo& sil, sinfo& sir)
       unsigned int ln,rn;
       ln=(unsigned int)ssil.n;
       rn=(unsigned int)ssir.n;
-      MPI_Pack(&ln,1,MPI_UNSIGNED,buffer,SIZE_UINT4,&position,MPI_COMM_WORLD);
-      MPI_Pack(&rn,1,MPI_UNSIGNED,buffer,SIZE_UINT4,&position,MPI_COMM_WORLD);
-      MPI_Pack(&ssil.sumy2,1,MPI_DOUBLE,buffer,SIZE_UINT4,&position,MPI_COMM_WORLD);
-      MPI_Pack(&ssir.sumy2,1,MPI_DOUBLE,buffer,SIZE_UINT4,&position,MPI_COMM_WORLD);
+      MPI_Pack(&ln,1,MPI_UNSIGNED,buffer,SIZE_UINT4,&position,comm);
+      MPI_Pack(&rn,1,MPI_UNSIGNED,buffer,SIZE_UINT4,&position,comm);
+      MPI_Pack(&ssil.sumy2,1,MPI_DOUBLE,buffer,SIZE_UINT4,&position,comm);
+      MPI_Pack(&ssir.sumy2,1,MPI_DOUBLE,buffer,SIZE_UINT4,&position,comm);
 
-      MPI_Send(buffer,SIZE_UINT4,MPI_PACKED,0,0,MPI_COMM_WORLD);
+      MPI_Send(buffer,SIZE_UINT4,MPI_PACKED,0,0,comm);
    }
 #endif   
 }
@@ -143,8 +143,8 @@ void sbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv)
 //// cout << "pre:" << nvec[0] << " " << sumy2vec[0] << endl;
 
    // MPI sum
-   // MPI_Allreduce(MPI_IN_PLACE,&nvec,siv.size(),MPI_UNSIGNED,MPI_SUM,MPI_COMM_WORLD);
-   // MPI_Allreduce(MPI_IN_PLACE,&sumy2vec,siv.size(),MPI_DOUBLE,MPI_SUM,MPI_COMM_WORLD);
+   // MPI_Allreduce(MPI_IN_PLACE,&nvec,siv.size(),MPI_UNSIGNED,MPI_SUM,comm);
+   // MPI_Allreduce(MPI_IN_PLACE,&sumy2vec,siv.size(),MPI_DOUBLE,MPI_SUM,comm);
    if(rank==0) {
       MPI_Status status;
       unsigned int tempnvec[siv.size()];
@@ -152,13 +152,13 @@ void sbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv)
 
       // receive nvec, update and send back.
       for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Recv(&tempnvec,siv.size(),MPI_UNSIGNED,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+         MPI_Recv(&tempnvec,siv.size(),MPI_UNSIGNED,MPI_ANY_SOURCE,MPI_ANY_TAG,comm,&status);
          for(size_t j=0;j<siv.size();j++)
             nvec[j]+=tempnvec[j];
       }
       MPI_Request *request=new MPI_Request[tc];
       for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Isend(&nvec,siv.size(),MPI_UNSIGNED,i,0,MPI_COMM_WORLD,&request[i-1]);
+         MPI_Isend(&nvec,siv.size(),MPI_UNSIGNED,i,0,comm,&request[i-1]);
       }
       // cast back to ssi
       for(size_t i=0;i<siv.size();i++) {
@@ -170,13 +170,13 @@ void sbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv)
 
       // receive sumwy2vec, update and send back.
       for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Recv(&tempsumy2vec,siv.size(),MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+         MPI_Recv(&tempsumy2vec,siv.size(),MPI_DOUBLE,MPI_ANY_SOURCE,MPI_ANY_TAG,comm,&status);
          for(size_t j=0;j<siv.size();j++)
             sumy2vec[j]+=tempsumy2vec[j];
       }
       request=new MPI_Request[tc];
       for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Isend(&sumy2vec,siv.size(),MPI_DOUBLE,i,0,MPI_COMM_WORLD,&request[i-1]);
+         MPI_Isend(&sumy2vec,siv.size(),MPI_DOUBLE,i,0,comm,&request[i-1]);
       }
       // cast back to ssi
       for(size_t i=0;i<siv.size();i++) {
@@ -191,14 +191,14 @@ void sbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv)
       MPI_Status status;
 
       // send/recv nvec      
-      MPI_Isend(&nvec,siv.size(),MPI_UNSIGNED,0,0,MPI_COMM_WORLD,request);
+      MPI_Isend(&nvec,siv.size(),MPI_UNSIGNED,0,0,comm,request);
       MPI_Wait(request,MPI_STATUSES_IGNORE);
       delete request;
-      MPI_Recv(&nvec,siv.size(),MPI_UNSIGNED,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+      MPI_Recv(&nvec,siv.size(),MPI_UNSIGNED,0,MPI_ANY_TAG,comm,&status);
 
       // send sumwvec, update nvec, receive sumwvec
       request=new MPI_Request;
-      MPI_Isend(&sumy2vec,siv.size(),MPI_DOUBLE,0,0,MPI_COMM_WORLD,request);
+      MPI_Isend(&sumy2vec,siv.size(),MPI_DOUBLE,0,0,comm,request);
       // cast back to ssi
       for(size_t i=0;i<siv.size();i++) {
          ssinfo* ssi=static_cast<ssinfo*>(siv[i]);
@@ -206,7 +206,7 @@ void sbrt::local_mpi_reduce_allsuff(std::vector<sinfo*>& siv)
       }
       MPI_Wait(request,MPI_STATUSES_IGNORE);
       delete request;
-      MPI_Recv(&sumy2vec,siv.size(),MPI_DOUBLE,0,MPI_ANY_TAG,MPI_COMM_WORLD,&status);
+      MPI_Recv(&sumy2vec,siv.size(),MPI_DOUBLE,0,MPI_ANY_TAG,comm,&status);
 
       // update sumy2vec
       // cast back to msi

@@ -35,6 +35,9 @@ public:
    void draw_mpislave(rn& gen);
    void adapt();
    void setmpirank(int rank) { this->rank = rank; for(size_t j=0;j<m;j++) sb[j].setmpirank(rank); }  //only needed for MPI
+#ifdef _OPENMPI
+   void setmpicomm(MPI_Comm comm) { this->comm = comm; for(size_t j=0;j<m;j++) sb[j].setmpicomm(comm); }  //only needed for MPI
+#endif
    void setmpicvrange(int* lwr, int* upr) { this->chv_lwr=lwr; this->chv_upr=upr; for(size_t j=0;j<m;j++) sb[j].setmpicvrange(lwr,upr); } //only needed for MPI
    void setci(double nu, double lambda) { ci.nu=nu; ci.lambda=lambda; for(size_t j=0;j<m;j++) sb[j].setci(nu,lambda); }
    void settc(int tc) { this->tc = tc; for(size_t j=0;j<m;j++) sb[j].settc(tc); }

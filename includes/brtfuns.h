@@ -44,7 +44,9 @@ void updatecormat(tree::tree_p pertnode, xinfo& xi, std::vector<std::vector<doub
 void normchgvrow(size_t row, std::vector<std::vector<double> >& chgv);
 //--------------------------------------------------
 // MPI version of the above 2 combined into 1 call.
-void mpi_update_norm_cormat(size_t rank, size_t tc, tree::tree_p pertnode, xinfo& xi, std::vector<double>& chgvrow, int* chv_lwr, int* chv_upr);
+#ifdef _OPENMPI
+void mpi_update_norm_cormat(size_t rank, size_t tc, tree::tree_p pertnode, xinfo& xi, std::vector<double>& chgvrow, int* chv_lwr, int* chv_upr, MPI_Comm comm);
+#endif
 
 //--------------------------------------------------
 // randomly choose a new variable to transition to from oldv

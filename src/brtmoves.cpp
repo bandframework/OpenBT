@@ -66,14 +66,14 @@ void brt::pertcv(rn& gen)
 #ifdef _OPENMPI 
       MPI_Request *request = new MPI_Request[tc];
       for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCHGV,MPI_COMM_WORLD,&request[i-1]);
+         MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCHGV,comm,&request[i-1]);
       }
       std::vector<double> chgvrow;
       chgvrow=(*mi.corv)[oldv]; 
       MPI_Waitall(tc,request,MPI_STATUSES_IGNORE);
       delete[] request;
 
-      mpi_update_norm_cormat(rank,tc,pertnode,*xi,chgvrow,chv_lwr,chv_upr);
+      mpi_update_norm_cormat(rank,tc,pertnode,*xi,chgvrow,chv_lwr,chv_upr,comm);
       newv=getchgvfromrow(oldv,chgvrow,gen);
 #else
       std::vector<std::vector<double> > chgv;
@@ -102,11 +102,11 @@ void brt::pertcv(rn& gen)
       request = new MPI_Request[tc];
       char buffer[SIZE_UINT3];
       int position=0;
-      MPI_Pack(&propcint,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,MPI_COMM_WORLD);
-      MPI_Pack(&propvint,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,MPI_COMM_WORLD);
-      MPI_Pack(&didswap,1,MPI_CXX_BOOL,buffer,SIZE_UINT3,&position,MPI_COMM_WORLD);
+      MPI_Pack(&propcint,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,comm);
+      MPI_Pack(&propvint,1,MPI_UNSIGNED,buffer,SIZE_UINT3,&position,comm);
+      MPI_Pack(&didswap,1,MPI_CXX_BOOL,buffer,SIZE_UINT3,&position,comm);
       for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Isend(buffer,SIZE_UINT3,MPI_PACKED,i,MPI_TAG_PERTCHGV,MPI_COMM_WORLD,&request[i-1]);
+         MPI_Isend(buffer,SIZE_UINT3,MPI_PACKED,i,MPI_TAG_PERTCHGV,comm,&request[i-1]);
       }
       std::vector<double> chgvrownew;
       chgvrownew=(*mi.corv)[newv];
@@ -114,7 +114,7 @@ void brt::pertcv(rn& gen)
       MPI_Waitall(tc,request,MPI_STATUSES_IGNORE);
       delete[] request;
 
-      mpi_update_norm_cormat(rank,tc,pertnode,*xi,chgvrownew,chv_lwr,chv_upr);
+      mpi_update_norm_cormat(rank,tc,pertnode,*xi,chgvrownew,chv_lwr,chv_upr,comm);
       if(chgvrownew[oldv]==0.0)
          cout << "Proposal newv cannot return to oldv!  This is not possible!" << endl;
 
@@ -166,12 +166,12 @@ void brt::pertcv(rn& gen)
          pertnode->setc(newc); //because the call to getchgvsuff changes it back to oldc to calc the old lil
 #ifdef _OPENMPI
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCHGV_ACCEPT,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCHGV_ACCEPT,comm,&request[i-1]);
          }
       }
       else { //transmit reject over MPI
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCHGV_REJECT,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCHGV_REJECT,comm,&request[i-1]);
          }
       }
 #else
@@ -209,9 +209,9 @@ void brt::pertcv(rn& gen)
          MPI_Request *request = new MPI_Request[tc];
          char buffer[SIZE_UINT1];
          int position=0;
-         MPI_Pack(&propcint,1,MPI_UNSIGNED,buffer,SIZE_UINT1,&position,MPI_COMM_WORLD);
+         MPI_Pack(&propcint,1,MPI_UNSIGNED,buffer,SIZE_UINT1,&position,comm);
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(buffer,SIZE_UINT1,MPI_PACKED,i,MPI_TAG_PERTCV,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(buffer,SIZE_UINT1,MPI_PACKED,i,MPI_TAG_PERTCV,comm,&request[i-1]);
          }
 #endif
       oldai=(int)(floor(propc-mi.pertalpha*(U-L+1)/2.0));
@@ -257,12 +257,12 @@ void brt::pertcv(rn& gen)
          pertnode->setc(propc); //because the call to getpertsuff changes it back to oldc to calc the old lil.
 #ifdef _OPENMPI
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCV_ACCEPT,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCV_ACCEPT,comm,&request[i-1]);
          }
       }
       else { //transmit reject over MPI
          for(size_t i=1; i<=(size_t)tc; i++) {
-            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCV_REJECT,MPI_COMM_WORLD,&request[i-1]);
+            MPI_Isend(NULL,0,MPI_PACKED,i,MPI_TAG_PERTCV_REJECT,comm,&request[i-1]);
          }
       }
 #else
@@ -290,7 +290,7 @@ bool brt::rot(tree::tree_p tnew, tree& x, rn& gen)
    if(rank==0) {
       const int tag=MPI_TAG_ROTATE;
       for(size_t i=1; i<=(size_t)tc; i++) {
-         MPI_Isend(NULL,0,MPI_PACKED,i,tag,MPI_COMM_WORLD,&request[i-1]);
+         MPI_Isend(NULL,0,MPI_PACKED,i,tag,comm,&request[i-1]);
       }
    }
    #endif
