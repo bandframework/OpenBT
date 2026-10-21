@@ -9,6 +9,7 @@
 #include <fstream>
 #include <vector>
 #include <limits>
+#include <cmath>
 
 #include "Eigen/Dense"
 #include <Eigen/StdVector>
@@ -24,6 +25,7 @@
 #include "tnorm.h"
 #include "mxbrt.h"
 #include "amxbrt.h"
+#include "shardinfo.h"
 
 using std::cout;
 using std::endl;
@@ -102,6 +104,12 @@ int main(int argc, char* argv[])
    //mean offset
    double fmean;
    conf >> fmean;
+
+   //number of shards: optional so that older config files predict unsharded.
+   size_t nshards=1;
+   int tempnshards;
+   if(conf >> tempnshards)
+      if(tempnshards>1) nshards=(size_t)tempnshards;
    conf.close();
    
    //MPI initialization
@@ -124,6 +132,11 @@ int main(int argc, char* argv[])
       cout << "Error: tc does not match mpitc" << endl;
       MPI_Finalize();
       return 2; //mismatch between how MPI was started and how the data is prepared according to tc.
+   }
+   if(nshards>1 && modeltype==MODEL_MIXBART) {
+      if(mpirank==0) cout << "Error: sharding is not supported for model mixing" << endl;
+      MPI_Finalize();
+      return 9;
    }
 // #else
 //    if(tc!=1) return 0; //serial mode should have no slave threads!
@@ -251,82 +264,30 @@ if(modeltype!=MODEL_MIXBART){
 
 
 
-   //load from file
-#ifndef SILENT
-   if(mpirank==0) cout << "Loading saved posterior tree draws" << endl;
-#endif
-   size_t ind,im,imh;
-   std::ifstream imf(folder + modelname + ".fit");
-   imf >> ind;
-   imf >> im;
-   imf >> imh;
+   //shard weights, a single shard of weight 1 when unsharded
+   shardinfo shi;
+   if(nshards>1) {
+      std::ifstream shf(folder + modelname + ".shards");
+      size_t fileS=0;
+      if(shf >> fileS && fileS==nshards) {
+         shf.seekg(0);
+         shi.read(shf);
+      }
+      if(!shf || fileS!=nshards) {
+         cout << "Error loading shard information from " << folder + modelname + ".shards" << endl;
 #ifdef _OPENMPI
-   if(nd!=ind) { cout << "Error loading posterior trees" << endl; MPI_Finalize(); return 3; }
-   if(m!=im) { cout << "Error loading posterior trees" << endl; MPI_Finalize(); return 4; }
-   if(mh!=imh) { cout << "Error loading posterior trees"  << endl; MPI_Finalize(); return 5; }
-#else
-   if(nd!=ind) { cout << "Error loading posterior trees" << endl; return 3; }
-   if(m!=im) { cout << "Error loading posterior trees" << endl; return 4; }
-   if(mh!=imh) { cout << "Error loading posterior trees" << endl; return 5; }
+         MPI_Finalize();
 #endif
+         return 9;
+      }
+   }
 
-   size_t temp=0;
-   imf >> temp;
-   std::vector<int> e_ots(temp);
-   for(size_t i=0;i<temp;i++) imf >> e_ots.at(i);
-
-   temp=0;
-   imf >> temp;
-   std::vector<int> e_oid(temp);
-   for(size_t i=0;i<temp;i++) imf >> e_oid.at(i);
-
-   temp=0;
-   imf >> temp;
-   std::vector<int> e_ovar(temp);
-   for(size_t i=0;i<temp;i++) imf >> e_ovar.at(i);
-
-   temp=0;
-   imf >> temp;
-   std::vector<int> e_oc(temp);
-   for(size_t i=0;i<temp;i++) imf >> e_oc.at(i);
-
-   temp=0;
-   imf >> temp;
-   std::vector<double> e_otheta(temp);
-   for(size_t i=0;i<temp;i++) imf >> std::scientific >> e_otheta.at(i);
-
-   temp=0;
-   imf >> temp;
-   std::vector<int> e_sts(temp);
-   for(size_t i=0;i<temp;i++) imf >> e_sts.at(i);
-
-   temp=0;
-   imf >> temp;
-   std::vector<int> e_sid(temp);
-   for(size_t i=0;i<temp;i++) imf >> e_sid.at(i);
-
-   temp=0;
-   imf >> temp;
-   std::vector<int> e_svar(temp);
-   for(size_t i=0;i<temp;i++) imf >> e_svar.at(i);
-
-   temp=0;
-   imf >> temp;
-   std::vector<int> e_sc(temp);
-   for(size_t i=0;i<temp;i++) imf >> e_sc.at(i);
-
-   temp=0;
-   imf >> temp;
-   std::vector<double> e_stheta(temp);
-   for(size_t i=0;i<temp;i++) imf >> std::scientific >> e_stheta.at(i);
-
-   imf.close();
-
-
-
-   //objects where we'll store the realizations
-   std::vector<std::vector<double> > tedraw(nd,std::vector<double>(np));
-   std::vector<std::vector<double> > tedrawh(nd,std::vector<double>(np));
+   //objects where we'll store the realizations.  When sharded, tedraw and
+   //tedrawh accumulate the weighted sums of f_s and sig_s^2 over the shards
+   //and tedrawm2 the weighted sum of f_s^2.
+   std::vector<std::vector<double> > tedraw(nd,std::vector<double>(np,0.0));
+   std::vector<std::vector<double> > tedrawh(nd,std::vector<double>(np,0.0));
+   std::vector<std::vector<double> > tedrawm2(nshards>1 ? nd : 0,std::vector<double>(np,0.0));
    std::vector<std::vector<double> > tedrawp(nd,std::vector<double>(np));
    double *fp = new double[np];
    dinfo dip;
@@ -352,61 +313,157 @@ if(modeltype!=MODEL_MIXBART){
    if(mpirank==0) tstart=MPI_Wtime();
 #endif
 
+   for(size_t s=0;s<nshards;s++) {
+      std::string shardlabel("");
+      if(nshards>1) shardlabel=" for shard " + std::to_string(s);
 
-   // Mean trees first
-   if(mpirank==0) cout << "Drawing mean response from posterior predictive" << endl;
-   for(size_t i=0;i<nd;i++) {
-      curdx=0;
-      for(size_t j=0;j<m;j++) {
-         onn[j]=e_ots.at(i*m+j);
-         oid[j].resize(onn[j]);
-         ov[j].resize(onn[j]);
-         oc[j].resize(onn[j]);
-         otheta[j].resize(onn[j]);
-         for(size_t k=0;k< (size_t)onn[j];k++) {
-            oid[j][k]=e_oid.at(cumdx+curdx+k);
-            ov[j][k]=e_ovar.at(cumdx+curdx+k);
-            oc[j][k]=e_oc.at(cumdx+curdx+k);
-            otheta[j][k]=e_otheta.at(cumdx+curdx+k);
+      //load from file
+#ifndef SILENT
+      if(mpirank==0) cout << "Loading saved posterior tree draws" << shardlabel << endl;
+#endif
+      size_t ind,im,imh;
+      std::string fitname(folder + modelname + ".fit");
+      if(nshards>1) fitname+="." + std::to_string(s);
+      std::ifstream imf(fitname);
+      imf >> ind;
+      imf >> im;
+      imf >> imh;
+#ifdef _OPENMPI
+      if(nd!=ind) { cout << "Error loading posterior trees" << endl; MPI_Finalize(); return 3; }
+      if(m!=im) { cout << "Error loading posterior trees" << endl; MPI_Finalize(); return 4; }
+      if(mh!=imh) { cout << "Error loading posterior trees"  << endl; MPI_Finalize(); return 5; }
+#else
+      if(nd!=ind) { cout << "Error loading posterior trees" << endl; return 3; }
+      if(m!=im) { cout << "Error loading posterior trees" << endl; return 4; }
+      if(mh!=imh) { cout << "Error loading posterior trees" << endl; return 5; }
+#endif
+
+      size_t temp=0;
+      imf >> temp;
+      std::vector<int> e_ots(temp);
+      for(size_t i=0;i<temp;i++) imf >> e_ots.at(i);
+
+      temp=0;
+      imf >> temp;
+      std::vector<int> e_oid(temp);
+      for(size_t i=0;i<temp;i++) imf >> e_oid.at(i);
+
+      temp=0;
+      imf >> temp;
+      std::vector<int> e_ovar(temp);
+      for(size_t i=0;i<temp;i++) imf >> e_ovar.at(i);
+
+      temp=0;
+      imf >> temp;
+      std::vector<int> e_oc(temp);
+      for(size_t i=0;i<temp;i++) imf >> e_oc.at(i);
+
+      temp=0;
+      imf >> temp;
+      std::vector<double> e_otheta(temp);
+      for(size_t i=0;i<temp;i++) imf >> std::scientific >> e_otheta.at(i);
+
+      temp=0;
+      imf >> temp;
+      std::vector<int> e_sts(temp);
+      for(size_t i=0;i<temp;i++) imf >> e_sts.at(i);
+
+      temp=0;
+      imf >> temp;
+      std::vector<int> e_sid(temp);
+      for(size_t i=0;i<temp;i++) imf >> e_sid.at(i);
+
+      temp=0;
+      imf >> temp;
+      std::vector<int> e_svar(temp);
+      for(size_t i=0;i<temp;i++) imf >> e_svar.at(i);
+
+      temp=0;
+      imf >> temp;
+      std::vector<int> e_sc(temp);
+      for(size_t i=0;i<temp;i++) imf >> e_sc.at(i);
+
+      temp=0;
+      imf >> temp;
+      std::vector<double> e_stheta(temp);
+      for(size_t i=0;i<temp;i++) imf >> std::scientific >> e_stheta.at(i);
+
+      imf.close();
+
+
+      // Mean trees first
+      if(mpirank==0) cout << "Drawing mean response from posterior predictive" << shardlabel << endl;
+      cumdx=0;
+      for(size_t i=0;i<nd;i++) {
+         curdx=0;
+         for(size_t j=0;j<m;j++) {
+            onn[j]=e_ots.at(i*m+j);
+            oid[j].resize(onn[j]);
+            ov[j].resize(onn[j]);
+            oc[j].resize(onn[j]);
+            otheta[j].resize(onn[j]);
+            for(size_t k=0;k< (size_t)onn[j];k++) {
+               oid[j][k]=e_oid.at(cumdx+curdx+k);
+               ov[j][k]=e_ovar.at(cumdx+curdx+k);
+               oc[j][k]=e_oc.at(cumdx+curdx+k);
+               otheta[j][k]=e_otheta.at(cumdx+curdx+k);
+            }
+            curdx+=(size_t)onn[j];
          }
-         curdx+=(size_t)onn[j];
-      }
-      cumdx+=curdx;
+         cumdx+=curdx;
 
-      ambm.loadtree(0,m,onn,oid,ov,oc,otheta);
-      // draw realization
-      ambm.predict(&dip);
-      for(size_t j=0;j<np;j++) tedraw[i][j] = fp[j] + fmean;
+         ambm.loadtree(0,m,onn,oid,ov,oc,otheta);
+         // draw realization
+         ambm.predict(&dip);
+         for(size_t j=0;j<np;j++) {
+            tedraw[i][j] += shi.w[s]*fp[j];
+            if(nshards>1) tedrawm2[i][j] += shi.w[s]*fp[j]*fp[j];
+         }
+      }
+
+
+      // Variance trees second
+      if(mpirank==0) cout << "Drawing sd response from posterior predictive" << shardlabel << endl;
+      cumdx=0;
+      curdx=0;
+      for(size_t i=0;i<nd;i++) {
+         curdx=0;
+         for(size_t j=0;j<mh;j++) {
+            snn[j]=e_sts.at(i*mh+j);
+            sid[j].resize(snn[j]);
+            sv[j].resize(snn[j]);
+            sc[j].resize(snn[j]);
+            stheta[j].resize(snn[j]);
+            for(size_t k=0;k< (size_t)snn[j];k++) {
+               sid[j][k]=e_sid.at(cumdx+curdx+k);
+               sv[j][k]=e_svar.at(cumdx+curdx+k);
+               sc[j][k]=e_sc.at(cumdx+curdx+k);
+               stheta[j][k]=e_stheta.at(cumdx+curdx+k);
+            }
+            curdx+=(size_t)snn[j];
+         }
+         cumdx+=curdx;
+
+         psbm.loadtree(0,mh,snn,sid,sv,sc,stheta);
+         // draw realization
+         psbm.predict(&dip);
+         for(size_t j=0;j<np;j++) tedrawh[i][j] += shi.w[s]*fp[j]*fp[j];
+      }
    }
 
-
-   // Variance trees second
-   if(mpirank==0) cout << "Drawing sd response from posterior predictive" << endl;
-   cumdx=0;
-   curdx=0;
-   for(size_t i=0;i<nd;i++) {
-      curdx=0;
-      for(size_t j=0;j<mh;j++) {
-         snn[j]=e_sts.at(i*mh+j);
-         sid[j].resize(snn[j]);
-         sv[j].resize(snn[j]);
-         sc[j].resize(snn[j]);
-         stheta[j].resize(snn[j]);
-         for(size_t k=0;k< (size_t)snn[j];k++) {
-            sid[j][k]=e_sid.at(cumdx+curdx+k);
-            sv[j][k]=e_svar.at(cumdx+curdx+k);
-            sc[j][k]=e_sc.at(cumdx+curdx+k);
-            stheta[j][k]=e_stheta.at(cumdx+curdx+k);
+   // Combine the shards.  The mean is sum_s w_s f_s and the sd is that of the
+   // mixture over shards, sqrt(sum_s w_s (sig_s^2 + f_s^2) - mean^2).  When
+   // unsharded this reduces exactly to f + fmean and sig.
+   for(size_t i=0;i<nd;i++)
+      for(size_t j=0;j<np;j++) {
+         double bv=0.0;
+         if(nshards>1) {
+            bv=tedrawm2[i][j]-tedraw[i][j]*tedraw[i][j];
+            if(bv<0.0) bv=0.0;
          }
-         curdx+=(size_t)snn[j];
+         tedrawh[i][j]=std::sqrt(tedrawh[i][j]+bv);
+         tedraw[i][j]+=fmean;
       }
-      cumdx+=curdx;
-
-      psbm.loadtree(0,mh,snn,sid,sv,sc,stheta);
-      // draw realization
-      psbm.predict(&dip);
-      for(size_t j=0;j<np;j++) tedrawh[i][j] = fp[j];
-   }
 
    // For probit models we'll also construct probabilities
    if(modeltype==MODEL_PROBIT || modeltype==MODEL_MODIFIEDPROBIT) {
