@@ -48,7 +48,9 @@ model=NULL,
 modelname="model",
 nshards=1,
 shardcuts=NULL,
-u.train=NULL
+u.train=NULL,
+uevery=0,
+uindraws=TRUE
 )
 {
 #--------------------------------------------------
@@ -166,7 +168,12 @@ if(nshards>1)
    if(!is.null(u.train))
       if(length(u.train)!=n || min(u.train)<0 || max(u.train)>=1)
          stop("u.train must be a vector of length(y.train) values in [0,1).\n")
-}
+   if(length(uevery)!=1 || is.na(uevery) || uevery<0 || uevery!=round(uevery))
+      stop("uevery must be a non-negative integer.\n")
+   if(!is.logical(uindraws) || length(uindraws)!=1 || is.na(uindraws))
+      stop("uindraws must be TRUE or FALSE.\n")
+} else if(uevery>0)
+   warning("uevery is ignored when nshards=1.\n")
 #np = nrow(x.test)
 x = t(x.train)
 #xp = t(x.test)
@@ -364,7 +371,7 @@ writeLines(c(paste(modeltype),xroot,yroot,fmean.out,paste(m),paste(mh),paste(nd)
             paste(pbd),paste(pb),paste(pbdh),paste(pbh),paste(stepwpert),paste(stepwperth),
             paste(probchv),paste(probchvh),paste(minnumbot),paste(minnumboth),
             paste(printevery),paste(xiroot),paste(modelname),paste(summarystats)),fout)
-if(nshards>1) writeLines(c(paste(nshards),shardcutroot,uroot),fout)
+if(nshards>1) writeLines(c(paste(nshards),shardcutroot,uroot,paste(uevery),paste(uindraws)),fout)
 close(fout)
 # folder=paste(".",modelname,"/",sep="")
 # system(paste("rm -rf ",folder,sep=""))
@@ -442,6 +449,14 @@ cmdopt=system(cmd)
 if(cmdopt==101) # MPI
 {
    cmd=paste("mpirun -np ",tc," openbtcli ",folder,sep="")
+   # Open MPI's shared-memory transport gives each pair of processes that exchanges
+   # more than a few messages a "fast box", and every poll checks all of them.
+   # Redrawing u exchanges data between all pairs of processes, which would give every
+   # process fast boxes to all the others and slow every later message, so cap them at
+   # the number a shard needs.  (Ignored by other MPI implementations, and left alone
+   # if the user has set it.)
+   if(nshards>1 && uevery>0 && Sys.getenv("OMPI_MCA_btl_vader_fbox_max")=="")
+      cmd=paste("OMPI_MCA_btl_vader_fbox_max=",tc/nshards-1," ",cmd,sep="")
 }
 
 if(cmdopt==100)  # serial/OpenMP
@@ -477,8 +492,11 @@ if(nshards>1)
    res$influence=res$influence[order(res$influence[,1]),-1,drop=FALSE]
    rownames(res$influence)=NULL
    so=so[order(so[,1]),,drop=FALSE]
+   # (when u is redrawn these are the final u values and shard labels)
    res$u=as.vector(so[,2])
    res$shard=as.vector(so[,3])+1 # shards are numbered 1,...,nshards in R
+   res$uevery=uevery
+   res$uindraws=uindraws
 
    # Shard cutpoints, weights and sizes.
    sh=scan(paste(folder,"/",modelname,".shards",sep=""),quiet=TRUE)
@@ -2327,7 +2345,13 @@ print.OpenBT_posterior<-function(x, ...)
    cat("ntreeh=",post$mh," \n",sep="")
    cat(post$nd," posterior draws.\n")
    if(!is.null(post$nshards) && post$nshards>1)
-      cat("Shards: ",post$nshards," (weights ",paste(signif(post$shards$w,4),collapse=" "),")\n",sep="")
+   {
+      cat("Shards: ",post$nshards," (weights ",paste(signif(post$shards$w,4),collapse=" "),")",sep="")
+      if(!is.null(post$uevery) && post$uevery>0)
+         cat(", u redrawn every ",post$uevery," iterations",
+             ifelse(post$uindraws," (including the saved draws)"," (adapt and burn-in only)"),sep="")
+      cat("\n")
+   }
    summary(post$xicuts)
 }
 
