@@ -190,17 +190,28 @@ int main(int argc, char* argv[])
    conf >> summarystats_str;
    if(summarystats_str=="TRUE"){ summarystats = true; }
 
-   //sharding: number of shards, shard cutpoints file and u file root.
-   //These are optional so that older config files run unsharded.
+   //sharding: number of shards, shard cutpoints file and u file root, then
+   //how often to redraw u (0=never) and whether to keep redrawing during the
+   //saved draws.  These are optional so that older config files run unsharded.
    size_t nshards=1;
    std::string shardcutcore("none");
    std::string ucore("none");
+   size_t uevery=0;
+   bool uindraws=false;
    int tempnshards;
    if(conf >> tempnshards) {
       if(tempnshards>1) nshards=(size_t)tempnshards;
       conf >> shardcutcore;
       conf >> ucore;
+      int tempuevery;
+      if(conf >> tempuevery) {
+         if(tempuevery>0) uevery=(size_t)tempuevery;
+         std::string uindraws_str;
+         conf >> uindraws_str;
+         if(uindraws_str=="TRUE") uindraws=true;
+      }
    }
+   if(nshards==1) uevery=0;
    conf.close();
 
    //folder
@@ -521,9 +532,16 @@ int main(int argc, char* argv[])
    shardinfo shi;
    std::vector<double> u;
    std::vector<double> obsid;
+   size_t T=0;  //number of data ranks per shard
+   crn ugen;    //u values are drawn with an independent stream on every rank
 #ifdef _OPENMPI
    if(nshards>1) {
-      size_t T=((size_t)mpitc)/nshards-1; //number of data ranks per shard
+      T=((size_t)mpitc)/nshards-1;
+      long long useed=static_cast<long long>(std::chrono::high_resolution_clock::now()
+                                .time_since_epoch()
+                                .count());
+      MPI_Bcast(&useed,1,MPI_LONG_LONG,0,MPI_COMM_WORLD);
+      ugen.set_seed(useed+mpirank);
 
       //common U-tree: equal width shards unless cutpoints are given
       bool shardok=true;
@@ -558,12 +576,6 @@ int main(int argc, char* argv[])
          }
       }
       else {
-         long long useed=static_cast<long long>(std::chrono::high_resolution_clock::now()
-                                   .time_since_epoch()
-                                   .count());
-         MPI_Bcast(&useed,1,MPI_LONG_LONG,0,MPI_COMM_WORLD);
-         crn ugen;
-         ugen.set_seed(useed+mpirank);
          u.resize(n);
          for(size_t i=0;i<n;i++) u[i]=ugen.uniform();
       }
@@ -576,7 +588,8 @@ int main(int argc, char* argv[])
       }
 
       //move each observation to its shard
-      mpi_shard_exchange(MPI_COMM_WORLD,shi,T,p,x,y,sigmav,u,obsid);
+      std::vector<std::vector<double>*> cols={&y,&sigmav,&obsid};
+      mpi_shard_exchange(MPI_COMM_WORLD,shi,T,p,x,u,cols);
       n=y.size();
       nsig=n;
 
@@ -602,6 +615,9 @@ int main(int argc, char* argv[])
 
       if(worldrank==0) {
          cout << "Sharded fit: " << nshards << " shards, " << T << " data ranks per shard" << endl;
+         if(uevery>0)
+            cout << "u is redrawn every " << uevery << " iterations"
+                 << (uindraws ? " (including the saved draws)" : " (adapt and burn-in only)") << endl;
          for(size_t s=0;s<nshards;s++) {
             cout << "   shard " << s << ": weight=" << shi.w[s] << " n=" << shi.ns[s] << endl;
             if(shi.ns[s]<2*minnumbot)
@@ -789,13 +805,12 @@ if(modeltype!=MODEL_MIXBART){
    //make di for psbrt object
    dinfo dips;
    dips.n=0; dips.p=p; dips.x=NULL; dips.y=NULL; dips.tc=tc;
-   double *r=NULL;
+   std::vector<double> r;
 #ifdef _OPENMPI
    if(mpirank>0) {
 #endif
-      r = new double[n];
-      for(size_t i=0;i<n;i++) r[i]=sigmav[i];
-      dips.x=&x[0]; dips.y=r; dips.n=n;
+      r = sigmav;
+      dips.x=&x[0]; dips.y=r.data(); dips.n=n;
 #ifdef _OPENMPI
    }
 #endif
@@ -857,6 +872,62 @@ if(modeltype!=MODEL_MIXBART){
    std::vector<double> CPOinfl(di.n,0.0);
    std::vector<double> CPOinfl_temp(di.n,0.0);
 
+   //Redraw u for every observation and move the observations to their new
+   //shards.  Each shard keeps its trees and recomputes its fitted values and
+   //residuals on its new data.  The influence accumulators travel with the
+   //observations.  This is collective over MPI_COMM_WORLD.
+   size_t ucount=0;     //iterations so far, counting adapt, burn and draw
+   size_t nredraws=0;
+   double utime=0.0;
+#ifdef _OPENMPI
+   auto redrawu=[&]() {
+      double ut0=MPI_Wtime();
+
+      //draw new u's until every shard has at least one observation per data rank
+      std::vector<unsigned long> nsv(nshards);
+      bool nsok=false;
+      while(!nsok) {
+         for(size_t i=0;i<n;i++) u[i]=ugen.uniform();
+         std::fill(nsv.begin(),nsv.end(),0);
+         for(size_t i=0;i<n;i++) nsv[shi.shard(u[i])]++;
+         MPI_Allreduce(MPI_IN_PLACE,nsv.data(),nshards,MPI_UNSIGNED_LONG,MPI_SUM,MPI_COMM_WORLD);
+         nsok=true;
+         for(size_t s=0;s<nshards;s++) if(nsv[s]<T) nsok=false;
+      }
+      for(size_t s=0;s<nshards;s++) shi.ns[s]=(size_t)nsv[s];
+
+      std::vector<std::vector<double>*> cols={&y,&sigmav,&obsid,&Cookd_mean,&Cookd_max,&KLinfl,&CPOinfl};
+      mpi_shard_exchange(MPI_COMM_WORLD,shi,T,p,x,u,cols);
+      n=y.size();
+      Cookd_mean_temp.resize(n); Cookd_max_temp.resize(n);
+      KLinfl_temp.resize(n); CPOinfl_temp.resize(n);
+
+      //point the data at the new rows and rebuild the model state from the trees
+      if(mpirank>0) {
+         r.resize(n);
+         di.n=n; di.x=&x[0]; di.y=&y[0];
+         disig.n=n; disig.x=&x[0]; disig.y=&sigmav[0];
+         dips.n=n; dips.x=&x[0]; dips.y=&r[0];
+      }
+      ambm.setdata(&di);
+      dips = di;
+      dips -= fambm;
+      psbm.setdata(&dips);
+      disig = fpsbm;  //sigma from this shard's variance trees (the carried values are from the old shard)
+      sig=disig.y;
+      ambm.setci(tau,sig);
+
+      nredraws++;
+      utime+=MPI_Wtime()-ut0;
+   };
+#endif
+   //redraw u before this iteration?
+   auto redrawnow=[&](bool indraws) {
+      bool doit=(uevery>0 && ucount>0 && ucount%uevery==0 && (uindraws || !indraws));
+      ucount++;
+      return doit;
+   };
+
 #ifdef _OPENMPI
    double tstart=0.0,tend=0.0,wtstart=0.0,wtend=0.0;
    if(nshards>1) { MPI_Barrier(MPI_COMM_WORLD); wtstart=MPI_Wtime(); }
@@ -869,6 +940,7 @@ if(modeltype!=MODEL_MIXBART){
    for(size_t i=0;i<nadapt;i++) {
       if((i % printevery) ==0 && printer) cout << "Adapt iteration " << i << endl;
 #ifdef _OPENMPI
+      if(redrawnow(false)) redrawu();
       if(mpirank==0) ambm.draw(gen); else ambm.draw_mpislave(gen);
 #else
       ambm.draw(gen);
@@ -904,6 +976,7 @@ if(modeltype!=MODEL_MIXBART){
    for(size_t i=0;i<burn;i++) {
       if((i % printevery) ==0 && printer) cout << "Burn iteration " << i << endl;
 #ifdef _OPENMPI
+      if(redrawnow(false)) redrawu();
       if(mpirank==0) ambm.draw(gen); else ambm.draw_mpislave(gen);
 #else
       ambm.draw(gen);
@@ -941,6 +1014,7 @@ if(modeltype!=MODEL_MIXBART){
    for(size_t i=0;i<nd;i++) {
       if((i % printevery) ==0 && printer) cout << "Draw iteration " << i << endl;
 #ifdef _OPENMPI
+      if(redrawnow(true)) redrawu();
       if(mpirank==0) ambm.draw(gen); else ambm.draw_mpislave(gen);
 #else
       ambm.draw(gen);
@@ -1019,6 +1093,9 @@ if(modeltype!=MODEL_MIXBART){
             maxtime=std::max(maxtime,stimes[s]);
          }
          cout << "Maximum shard training time was " << maxtime << " minutes." << endl;
+         if(nredraws>0)
+            cout << "u was redrawn " << nredraws << " times, taking " << utime/60.0
+                 << " minutes (including waiting for the other shards)." << endl;
          cout << "Training time was " << (wtend-wtstart)/60.0 << " minutes." << endl;
       }
    }
@@ -1155,11 +1232,8 @@ if(modeltype!=MODEL_MIXBART){
 #ifdef _OPENMPI
    delete[] lwr;
    delete[] upr;
-   if(mpirank>0) delete[] r;
    if(nshards>1) MPI_Comm_free(&shardcomm);
    MPI_Finalize();
-#else
-   delete[] r;
 #endif
 return 0;
 }else if(modeltype == MODEL_MIXBART){

@@ -66,15 +66,15 @@ void shardinfo::read(std::istream& is)
 //--------------------------------------------------
 //move each local observation to the data ranks of the shard its u falls in
 void mpi_shard_exchange(MPI_Comm comm, shardinfo& shi, size_t T, size_t p,
-                        std::vector<double>& x, std::vector<double>& y,
-                        std::vector<double>& sig, std::vector<double>& u,
-                        std::vector<double>& id)
+                        std::vector<double>& x, std::vector<double>& u,
+                        std::vector<std::vector<double>*>& cols)
 {
    int rank,size;
    MPI_Comm_rank(comm,&rank);
    MPI_Comm_size(comm,&size);
-   size_t n=y.size();
-   size_t rl=p+4; //row length: x, y, sig, u, id
+   size_t n=u.size();
+   size_t nc=cols.size();
+   size_t rl=p+1+nc; //row length: x, u, cols
 
    // destination rank of each local observation
    std::vector<int> dest(n);
@@ -101,7 +101,8 @@ void mpi_shard_exchange(MPI_Comm comm, shardinfo& shi, size_t T, size_t p,
    for(size_t i=0;i<n;i++) {
       double* row=&sbuf[pos[dest[i]]];
       for(size_t j=0;j<p;j++) row[j]=x[i*p+j];
-      row[p]=y[i]; row[p+1]=sig[i]; row[p+2]=u[i]; row[p+3]=id[i];
+      row[p]=u[i];
+      for(size_t k=0;k<nc;k++) row[p+1+k]=(*cols[k])[i];
       pos[dest[i]]+=(int)rl;
    }
 
@@ -110,11 +111,13 @@ void mpi_shard_exchange(MPI_Comm comm, shardinfo& shi, size_t T, size_t p,
 
    // unpack the rows this rank now owns
    size_t nn=rbuf.size()/rl;
-   x.resize(nn*p); y.resize(nn); sig.resize(nn); u.resize(nn); id.resize(nn);
+   x.resize(nn*p); u.resize(nn);
+   for(size_t k=0;k<nc;k++) cols[k]->resize(nn);
    for(size_t i=0;i<nn;i++) {
       const double* row=&rbuf[i*rl];
       for(size_t j=0;j<p;j++) x[i*p+j]=row[j];
-      y[i]=row[p]; sig[i]=row[p+1]; u[i]=row[p+2]; id[i]=row[p+3];
+      u[i]=row[p];
+      for(size_t k=0;k<nc;k++) (*cols[k])[i]=row[p+1+k];
    }
 }
 #endif

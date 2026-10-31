@@ -82,8 +82,11 @@ void psbrt::setdata(dinfo *di) {
     for(size_t i=0;i<di->n;i++)
       notjsigmavs[j][i]=pow(std::abs(this->di->y[i]/.8),1.0/m);  //E(|Y|) = .8sigma for normal
 
-  for(size_t j=0;j<m;j++)
+  // (delete any previous dinfo's so that setdata can be called again with new data)
+  for(size_t j=0;j<m;j++) {
+    delete divec[j];
     divec[j]=new dinfo(this->di->p,this->di->n,this->di->x,&notjsigmavs[j][0],this->di->tc);
+  }
 
   // each sb[j]'s data is the appropriate row in notjsigmavs
   for(size_t j=0;j<m;j++)

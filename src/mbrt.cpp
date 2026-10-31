@@ -43,9 +43,9 @@ void mbrt::draw_mpislave(rn& gen)
 double mbrt::drawnodetheta(sinfo& si, rn& gen)
 {
    msinfo& msi=static_cast<msinfo&>(si);
-   double muhat = msi.sumwy/msi.sumw;
    double a = 1.0/(ci.tau*ci.tau);
-   return (msi.sumw*muhat)/(a+msi.sumw) + gen.normal()/sqrt(a+msi.sumw);
+   //sumw*muhat = sumwy, written without muhat=sumwy/sumw so that an empty node (sumw=0) draws from the prior
+   return msi.sumwy/(a+msi.sumw) + gen.normal()/sqrt(a+msi.sumw);
 }
 //--------------------------------------------------
 //lm: log of integrated likelihood, depends on prior and suff stats

@@ -140,8 +140,9 @@ void brt::pertcv(rn& gen)
       bool hardreject=false;
       lmold=0.0;
       for(bvsz j=0;j!=sivold.size();j++) {
-         if(sivold[j]->n < mi.minperbot)
-            cout << "Error: old tree has some bottom nodes with <minperbot observations!" << endl;
+         //(small old bottom nodes are expected after the shard data is redrawn)
+         // if(sivold[j]->n < mi.minperbot)
+         //    cout << "Error: old tree has some bottom nodes with <minperbot observations!" << endl;
          lmold += lm(*(sivold[j]));
       }
 
@@ -233,8 +234,9 @@ void brt::pertcv(rn& gen)
       double lmold,lmnew;
       lmold=0.0;
       for(bvsz j=0;j!=sivold.size();j++) {
-         if(sivold[j]->n < mi.minperbot)
-            cout << "Error: old tree has some bottom nodes with <minperbot observations!" << endl;
+         //(small old bottom nodes are expected after the shard data is redrawn)
+         // if(sivold[j]->n < mi.minperbot)
+         //    cout << "Error: old tree has some bottom nodes with <minperbot observations!" << endl;
          lmold += lm(*(sivold[j]));
       }
 

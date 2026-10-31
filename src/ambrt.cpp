@@ -93,8 +93,11 @@ void ambrt::setdata(dinfo *di) {
     for(size_t i=0;i<di->n;i++)
       notjmus[j][i]=this->di->y[i]/((double)m);
   
-  for(size_t j=0;j<m;j++)
-    divec[j]=new dinfo(this->di->p,this->di->n,this->di->x,&notjmus[j][0],this->di->tc);  
+  // (delete any previous dinfo's so that setdata can be called again with new data)
+  for(size_t j=0;j<m;j++) {
+    delete divec[j];
+    divec[j]=new dinfo(this->di->p,this->di->n,this->di->x,&notjmus[j][0],this->di->tc);
+  }
   
   // each mb[j]'s data is the appropriate row in notjmus
   for(size_t j=0;j<m;j++)

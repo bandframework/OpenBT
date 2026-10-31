@@ -37,12 +37,12 @@ public:
 // Move each local observation to the shard its u value falls in.  Shard s is
 // owned by ranks s*(T+1),...,s*(T+1)+T of comm, where the first is the shard's
 // master (which receives no data) and the remaining T are its data ranks.
-// Observations are spread round-robin over a shard's data ranks.  On return the
-// x (row-major, n x p), y, sig, u and id vectors hold this rank's new rows.
+// Observations are spread round-robin over a shard's data ranks.  On return x
+// (row-major, n x p), u and each of the per-observation vectors in cols hold
+// this rank's new rows.
 void mpi_shard_exchange(MPI_Comm comm, shardinfo& shi, size_t T, size_t p,
-                        std::vector<double>& x, std::vector<double>& y,
-                        std::vector<double>& sig, std::vector<double>& u,
-                        std::vector<double>& id);
+                        std::vector<double>& x, std::vector<double>& u,
+                        std::vector<std::vector<double>*>& cols);
 #endif
 
 #endif
