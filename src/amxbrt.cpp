@@ -106,11 +106,13 @@ void amxbrt::setdata_mix(dinfo *di) {
 //--------------------------------------------------
 //set vector of predicted values for psbrt model
 void amxbrt::local_setf_mix(diterator& diter){
-   for(;diter<diter.until();diter++){
-      yhat[*diter]=0.0;
-      for(size_t j=0;j<m;j++)
-        yhat[*diter]+=mb[j].f(*diter); //sum of trees - add the fitted value from each tree
-   }
+   //loop over trees on the outside so that only one tree's yhat is streamed at a time
+   //(the inner loop over all m trees' yhat vectors could thrash the cache when their
+   // addresses alias; the order of the operations for each yhat[i] is unchanged)
+   for(diterator d=diter;d<d.until();d++) yhat[*d]=0.0;
+   for(size_t j=0;j<m;j++)
+      for(diterator d=diter;d<d.until();d++)
+         yhat[*d]+=mb[j].f(*d); //sum of trees - add the fitted value from each tree
 }
 
 //--------------------------------------------------
