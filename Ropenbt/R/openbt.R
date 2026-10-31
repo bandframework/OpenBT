@@ -502,13 +502,13 @@ if(nshards>1)
    sh=scan(paste(folder,"/",modelname,".shards",sep=""),quiet=TRUE)
    S=sh[1]
    res$shards=list(cuts=sh[1+seq_len(S-1)],w=sh[S+seq_len(S)],ns=sh[2*S+seq_len(S)])
-} else
+} else if(modeltype!=MODEL_MIXBART) # (openbtcli does not compute influence metrics for model mixing)
 {
    for(i in 1:nslv)
       res$influence=rbind(res$influence,as.matrix(read.table(paste(folder,"/",modelname,".influence",i,sep=""))))
 }
 
-colnames(res$influence)=c("MeanCookD", "MaxCookD", "KLDiv", "CPOinv")
+if(!is.null(res$influence)) colnames(res$influence)=c("MeanCookD", "MaxCookD", "KLDiv", "CPOinv")
 res$modeltype=modeltype
 res$model=model
 res$xroot=xroot; res$yroot=yroot;res$m=m; res$mh=mh; res$nd=nd; res$burn=burn
