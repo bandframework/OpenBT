@@ -61,6 +61,16 @@ void shardinfo::read(std::istream& is)
    for(size_t s=0;s<S;s++) is >> w[s];
    for(size_t s=0;s<S;s++) is >> ns[s];
 }
+//--------------------------------------------------
+//shard s's mean function (sum of its mean trees) and sigma (product of its
+//variance trees) at x, summed/multiplied in the same order as the models' setf
+void shardtrees::eval(size_t s, double* x, xinfo& xi, double& f, double& sd)
+{
+   f=0.0;
+   for(size_t j=0;j<mt[s].size();j++) f+=mt[s][j].bn(x,xi)->gettheta();
+   sd=1.0;
+   for(size_t j=0;j<vt[s].size();j++) sd*=vt[s][j].bn(x,xi)->gettheta();
+}
 
 #ifdef _OPENMPI
 //--------------------------------------------------
@@ -118,6 +128,73 @@ void mpi_shard_exchange(MPI_Comm comm, shardinfo& shi, size_t T, size_t p,
       for(size_t j=0;j<p;j++) x[i*p+j]=row[j];
       u[i]=row[p];
       for(size_t k=0;k<nc;k++) (*cols[k])[i]=row[p+1+k];
+   }
+}
+//--------------------------------------------------
+//gather every shard's trees on every rank
+void mpi_gather_shard_trees(MPI_Comm comm, shardinfo& shi, size_t T,
+                            std::vector<tree*>& mtrees, std::vector<tree*>& vtrees,
+                            shardtrees& st)
+{
+   int rank,size;
+   MPI_Comm_rank(comm,&rank);
+   MPI_Comm_size(comm,&size);
+   size_t m=mtrees.size(), mh=vtrees.size(), nt=m+mh;
+   bool sender=(((size_t)rank)%(T+1)==0);  //shard masters send their trees
+
+   // pack the node count of each tree, the ids, variables and cutpoints of each
+   // tree's nodes (as three blocks per tree) and the theta of each tree's nodes
+   std::vector<int> nn, ibuf;
+   std::vector<double> dbuf;
+   if(sender) {
+      nn.resize(nt);
+      for(size_t j=0;j<nt;j++) {
+         tree* t=(j<m) ? mtrees[j] : vtrees[j-m];
+         int k=(int)t->treesize();
+         nn[j]=k;
+         size_t ib=ibuf.size(), db=dbuf.size();
+         ibuf.resize(ib+3*k);
+         dbuf.resize(db+k);
+         t->treetovec(&ibuf[ib],&ibuf[ib+k],&ibuf[ib+2*k],&dbuf[db]);
+      }
+   }
+
+   // gather the counts, then the trees
+   int nnodes=(int)dbuf.size();
+   std::vector<int> nodecounts(size);
+   MPI_Allgather(&nnodes,1,MPI_INT,nodecounts.data(),1,MPI_INT,comm);
+   std::vector<int> ncounts(size), ndispls(size,0), icounts(size), idispls(size,0), dcounts(size), ddispls(size,0);
+   for(int r=0;r<size;r++) {
+      ncounts[r]=(((size_t)r)%(T+1)==0) ? (int)nt : 0;
+      icounts[r]=3*nodecounts[r];
+      dcounts[r]=nodecounts[r];
+      if(r>0) {
+         ndispls[r]=ndispls[r-1]+ncounts[r-1];
+         idispls[r]=idispls[r-1]+icounts[r-1];
+         ddispls[r]=ddispls[r-1]+dcounts[r-1];
+      }
+   }
+   std::vector<int> nnall(ndispls[size-1]+ncounts[size-1]);
+   std::vector<int> iall(idispls[size-1]+icounts[size-1]);
+   std::vector<double> dall(ddispls[size-1]+dcounts[size-1]);
+   MPI_Allgatherv(nn.data(),(int)nn.size(),MPI_INT,nnall.data(),ncounts.data(),ndispls.data(),MPI_INT,comm);
+   MPI_Allgatherv(ibuf.data(),(int)ibuf.size(),MPI_INT,iall.data(),icounts.data(),idispls.data(),MPI_INT,comm);
+   MPI_Allgatherv(dbuf.data(),(int)dbuf.size(),MPI_DOUBLE,dall.data(),dcounts.data(),ddispls.data(),MPI_DOUBLE,comm);
+
+   // unpack
+   st.mt.assign(shi.S,std::vector<tree>(m));
+   st.vt.assign(shi.S,std::vector<tree>(mh));
+   for(size_t s=0;s<shi.S;s++) {
+      int r=(int)(s*(T+1));
+      int* ip=&iall[idispls[r]];
+      double* dp=&dall[ddispls[r]];
+      for(size_t j=0;j<nt;j++) {
+         int k=nnall[ndispls[r]+j];
+         tree& t=(j<m) ? st.mt[s][j] : st.vt[s][j-m];
+         t.vectotree((size_t)k,ip,ip+k,ip+2*k,dp);
+         ip+=3*k;
+         dp+=k;
+      }
    }
 }
 #endif

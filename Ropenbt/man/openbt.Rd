@@ -13,7 +13,7 @@ openbt(x.train, y.train, f.train = matrix(1, nrow=length(y.train), ncol = 2), nt
      chv = cor(x.train,method="spearman"), pbd=.7, pb=.5, stepwpert=.1, probchv=.1,
      minnumbot=5, printevery=100, numcut=100, xicuts=NULL, nadapt=1000, adaptevery=100,
      summarystats=FALSE,truncateds=NULL,model=NULL,modelname="model",
-     nshards=1,shardcuts=NULL,u.train=NULL,uevery=0,uindraws=TRUE)
+     nshards=1,shardcuts=NULL,u.train=NULL,uevery=0,uindraws=TRUE,ustep="gibbs")
 }
 \arguments{
   \item{x.train}{nxp matrix of predictor variables for the training data.}
@@ -51,8 +51,9 @@ openbt(x.train, y.train, f.train = matrix(1, nrow=length(y.train), ncol = 2), nt
   \item{nshards}{Number of shards to split the data into (see Details).  Only supported for 'bart' and 'hbart' models.  The default of 1 fits a single model to all the data.}
   \item{shardcuts}{Optional \code{nshards-1} strictly increasing values in (0,1) defining the shards.  The default is \code{nshards} equal width shards.}
   \item{u.train}{Optional vector of \code{length(y.train)} values in [0,1) giving each observation's sharding variable.  By default these are drawn from U(0,1).}
-  \item{uevery}{Redraw the sharding variable every \code{uevery} MCMC iterations.  The default of 0 never redraws it.}
-  \item{uindraws}{If \code{TRUE}, the sharding variable is also redrawn while the posterior draws are being saved; if \code{FALSE}, only during the adapt and burn-in iterations.  Ignored when \code{uevery=0}.}
+  \item{uevery}{Update the sharding variable every \code{uevery} MCMC iterations.  The default of 0 never updates it.}
+  \item{uindraws}{If \code{TRUE}, the sharding variable is also updated while the posterior draws are being saved; if \code{FALSE}, only during the adapt and burn-in iterations.  Ignored when \code{uevery=0}.}
+  \item{ustep}{How the sharding variable is updated: \code{"gibbs"} (the default) draws each observation's shard from its full conditional given every shard's model, and \code{"prior"} redraws it from U(0,1).  Ignored when \code{uevery=0}.}
 }
 \details{
   \code{openbt()} is the main model fitting function for continuous and dichotomous response data.  
@@ -64,7 +65,9 @@ openbt(x.train, y.train, f.train = matrix(1, nrow=length(y.train), ncol = 2), nt
 
   Sharding (\code{nshards>1}) splits the data into shards according to a U(0,1) sharding variable, fits a separate BART or HBART model (including its own variance model) to each shard in parallel, and combines the shards' predictions weighted by the widths of their intervals of [0,1].  Each shard uses \code{tc/nshards} MPI processes, so \code{tc} must be a multiple of \code{nshards} with \code{tc/nshards>=2}, and every shard needs at least \code{tc/nshards-1} observations.  The returned object then also contains \code{u} and \code{shard} (each observation's sharding variable and shard, which are the final values when the sharding variable is redrawn) and \code{shards} (the shard cutpoints, weights and sizes).
 
-  With \code{uevery>0} the sharding variable is periodically redrawn and the observations moved to their new shards, so that each shard's trees see more of the data.  In our tests, \code{uevery} of around 100 with \code{uindraws=TRUE} improved accuracy and interval coverage over fixed shards at a small cost in run time.  Note that when \code{uindraws=TRUE} the saved draws are not an exact posterior given fixed shards, and that frequent redraws inflate the estimated variance, more so with many small shards.
+  With \code{uevery>0} the sharding variable is periodically updated and the observations moved to their new shards.  With \code{ustep="gibbs"} each observation's shard is drawn with probability proportional to the shard's weight times the observation's likelihood under that shard's model, and its sharding variable uniformly within that shard.  This is an exact Gibbs step, so the model becomes a mixture of \code{nshards} BART (or HBART) models and the shards specialise to the observations they fit best.  The draws are constrained so that every shard keeps at least \code{tc/nshards-1} observations; if that fails 100 times the current shards are kept.  The returned object then also contains \code{shardtrace}, with one row per update giving the number of iterations before it, the fraction of observations that changed shard, the attempts needed, whether the shards were updated and the shard sizes.
+
+  With \code{ustep="prior"} the sharding variable is instead redrawn from U(0,1), so that each shard's trees see more of the data.  In our tests, \code{uevery} of around 100 with \code{uindraws=TRUE} improved accuracy and interval coverage over fixed shards at a small cost in run time.  Note that this is not an exact Gibbs step, so when \code{uindraws=TRUE} the saved draws are not an exact posterior, and that frequent redraws inflate the estimated variance, more so with many small shards.
 
   Examples are available on the OpenBT wiki page.
 }

@@ -50,7 +50,8 @@ nshards=1,
 shardcuts=NULL,
 u.train=NULL,
 uevery=0,
-uindraws=TRUE
+uindraws=TRUE,
+ustep="gibbs"
 )
 {
 #--------------------------------------------------
@@ -172,6 +173,8 @@ if(nshards>1)
       stop("uevery must be a non-negative integer.\n")
    if(!is.logical(uindraws) || length(uindraws)!=1 || is.na(uindraws))
       stop("uindraws must be TRUE or FALSE.\n")
+   if(length(ustep)!=1 || !(ustep %in% c("gibbs","prior")))
+      stop("ustep must be \"gibbs\" or \"prior\".\n")
 } else if(uevery>0)
    warning("uevery is ignored when nshards=1.\n")
 #np = nrow(x.test)
@@ -371,7 +374,7 @@ writeLines(c(paste(modeltype),xroot,yroot,fmean.out,paste(m),paste(mh),paste(nd)
             paste(pbd),paste(pb),paste(pbdh),paste(pbh),paste(stepwpert),paste(stepwperth),
             paste(probchv),paste(probchvh),paste(minnumbot),paste(minnumboth),
             paste(printevery),paste(xiroot),paste(modelname),paste(summarystats)),fout)
-if(nshards>1) writeLines(c(paste(nshards),shardcutroot,uroot,paste(uevery),paste(uindraws)),fout)
+if(nshards>1) writeLines(c(paste(nshards),shardcutroot,uroot,paste(uevery),paste(uindraws),ustep),fout)
 close(fout)
 # folder=paste(".",modelname,"/",sep="")
 # system(paste("rm -rf ",folder,sep=""))
@@ -497,6 +500,12 @@ if(nshards>1)
    res$shard=as.vector(so[,3])+1 # shards are numbered 1,...,nshards in R
    res$uevery=uevery
    res$uindraws=uindraws
+   res$ustep=ustep
+   # (with ustep="gibbs", one row per update: iterations before the update, the
+   # fraction of labels changed, the attempts needed, whether the labels were
+   # updated and the shard sizes after the update)
+   fname=paste(folder,"/",modelname,".shardtrace",sep="")
+   if(file.exists(fname)) res$shardtrace=read.table(fname,header=TRUE)
 
    # Shard cutpoints, weights and sizes.
    sh=scan(paste(folder,"/",modelname,".shards",sep=""),quiet=TRUE)
@@ -2348,7 +2357,8 @@ print.OpenBT_posterior<-function(x, ...)
    {
       cat("Shards: ",post$nshards," (weights ",paste(signif(post$shards$w,4),collapse=" "),")",sep="")
       if(!is.null(post$uevery) && post$uevery>0)
-         cat(", u redrawn every ",post$uevery," iterations",
+         cat(", u ",ifelse(!is.null(post$ustep) && post$ustep=="gibbs","updated (Gibbs)","redrawn (prior)"),
+             " every ",post$uevery," iterations",
              ifelse(post$uindraws," (including the saved draws)"," (adapt and burn-in only)"),sep="")
       cat("\n")
    }

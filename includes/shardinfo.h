@@ -6,6 +6,7 @@
 #include <iostream>
 #include <vector>
 #include <cstddef>
+#include "tree.h"
 
 #ifdef _OPENMPI
 #   include <mpi.h>
@@ -32,6 +33,17 @@ public:
    std::vector<size_t> ns;    //S shard sample sizes (informational)
 };
 
+//--------------------------------------------------
+// Copies of every shard's mean and variance trees, so that each observation's
+// likelihood under every shard can be evaluated when updating the shard labels.
+class shardtrees {
+public:
+   void eval(size_t s, double* x, xinfo& xi, double& f, double& sd);  //f_s(x) and sigma_s(x)
+
+   std::vector<std::vector<tree> > mt;  //[shard][tree] mean trees (sum)
+   std::vector<std::vector<tree> > vt;  //[shard][tree] variance trees (product, giving sigma)
+};
+
 #ifdef _OPENMPI
 //--------------------------------------------------
 // Move each local observation to the shard its u value falls in.  Shard s is
@@ -43,6 +55,14 @@ public:
 void mpi_shard_exchange(MPI_Comm comm, shardinfo& shi, size_t T, size_t p,
                         std::vector<double>& x, std::vector<double>& u,
                         std::vector<std::vector<double>*>& cols);
+
+//--------------------------------------------------
+// Gather every shard's trees on every rank of comm.  Each shard's master sends
+// its mean trees mtrees and variance trees vtrees (the other ranks' are not
+// used, but every rank must pass the same number of each).
+void mpi_gather_shard_trees(MPI_Comm comm, shardinfo& shi, size_t T,
+                            std::vector<tree*>& mtrees, std::vector<tree*>& vtrees,
+                            shardtrees& st);
 #endif
 
 #endif

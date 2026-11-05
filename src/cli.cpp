@@ -191,13 +191,16 @@ int main(int argc, char* argv[])
    if(summarystats_str=="TRUE"){ summarystats = true; }
 
    //sharding: number of shards, shard cutpoints file and u file root, then
-   //how often to redraw u (0=never) and whether to keep redrawing during the
-   //saved draws.  These are optional so that older config files run unsharded.
+   //how often to update u (0=never), whether to keep updating during the
+   //saved draws and how to update it (prior: redraw from U(0,1), gibbs: draw
+   //the shard labels from their full conditional).  These are optional so that
+   //older config files run unsharded (or with prior redraws).
    size_t nshards=1;
    std::string shardcutcore("none");
    std::string ucore("none");
    size_t uevery=0;
    bool uindraws=false;
+   bool ugibbs=false;
    int tempnshards;
    if(conf >> tempnshards) {
       if(tempnshards>1) nshards=(size_t)tempnshards;
@@ -209,6 +212,8 @@ int main(int argc, char* argv[])
          std::string uindraws_str;
          conf >> uindraws_str;
          if(uindraws_str=="TRUE") uindraws=true;
+         std::string ustep_str;
+         if(conf >> ustep_str && ustep_str=="gibbs") ugibbs=true;
       }
    }
    if(nshards==1) uevery=0;
@@ -616,7 +621,8 @@ int main(int argc, char* argv[])
       if(worldrank==0) {
          cout << "Sharded fit: " << nshards << " shards, " << T << " data ranks per shard" << endl;
          if(uevery>0)
-            cout << "u is redrawn every " << uevery << " iterations"
+            cout << "u is " << (ugibbs ? "updated from its full conditional" : "redrawn from its prior")
+                 << " every " << uevery << " iterations"
                  << (uindraws ? " (including the saved draws)" : " (adapt and burn-in only)") << endl;
          for(size_t s=0;s<nshards;s++) {
             cout << "   shard " << s << ": weight=" << shi.w[s] << " n=" << shi.ns[s] << endl;
@@ -872,18 +878,27 @@ if(modeltype!=MODEL_MIXBART){
    std::vector<double> CPOinfl(di.n,0.0);
    std::vector<double> CPOinfl_temp(di.n,0.0);
 
-   //Redraw u for every observation and move the observations to their new
+   //Update u for every observation and move the observations to their new
    //shards.  Each shard keeps its trees and recomputes its fitted values and
    //residuals on its new data.  The influence accumulators travel with the
    //observations.  This is collective over MPI_COMM_WORLD.
    size_t ucount=0;     //iterations so far, counting adapt, burn and draw
    size_t nredraws=0;
    double utime=0.0;
+   const size_t maxutries=100;  //attempts to draw labels that leave every shard enough rows (gibbs)
+   size_t nufail=0;             //gibbs updates that kept the current labels after maxutries attempts
+   double uchanged=0.0;         //sum over the gibbs updates of the fraction of labels changed
+   std::ofstream otrace;        //gibbs: one line per update
+   if(ugibbs && uevery>0 && worldrank==0) {
+      otrace.open(folder + modelname + ".shardtrace");
+      otrace << "iter changed tries ok";
+      for(size_t s=0;s<nshards;s++) otrace << " ns" << (s+1);
+      otrace << endl;
+   }
 #ifdef _OPENMPI
-   auto redrawu=[&]() {
-      double ut0=MPI_Wtime();
-
-      //draw new u's until every shard has at least one observation per data rank
+   //prior: draw new u's from U(0,1) until every shard has at least one
+   //observation per data rank.
+   auto drawuprior=[&]() {
       std::vector<unsigned long> nsv(nshards);
       bool nsok=false;
       while(!nsok) {
@@ -895,6 +910,88 @@ if(modeltype!=MODEL_MIXBART){
          for(size_t s=0;s<nshards;s++) if(nsv[s]<T) nsok=false;
       }
       for(size_t s=0;s<nshards;s++) shi.ns[s]=(size_t)nsv[s];
+   };
+   //gibbs: given every shard's trees, draw each observation's shard from its
+   //full conditional P(s_i=s|.) proportional to w_s N(y_i; f_s(x_i), sigma_s(x_i)^2),
+   //then its u uniformly within that shard.  The labels are conditionally
+   //independent, so each rank draws its own.  If a shard would get fewer rows
+   //than it has data ranks, all the labels are redrawn (rejection sampling from
+   //the constrained full conditional); after maxutries attempts the current
+   //labels are kept.  Returns false if the labels are unchanged.
+   auto drawugibbs=[&]() {
+      shardtrees st;
+      std::vector<tree*> mtrees(m), vtrees(mh);
+      for(size_t j=0;j<m;j++) mtrees[j]=ambm.gettree(j);
+      for(size_t j=0;j<mh;j++) vtrees[j]=psbm.gettree(j);
+      mpi_gather_shard_trees(MPI_COMM_WORLD,shi,T,mtrees,vtrees,st);
+
+      //cumulative full conditional probabilities of each local row's shard
+      std::vector<double> cp(n*nshards), lp(nshards);
+      for(size_t i=0;i<n;i++) {
+         double lmax=-std::numeric_limits<double>::infinity();
+         for(size_t s=0;s<nshards;s++) {
+            double f,sd;
+            st.eval(s,&x[i*p],xi,f,sd);
+            double z=(y[i]-f)/sd;
+            lp[s]=std::log(shi.w[s])-std::log(sd)-0.5*z*z;
+            lmax=std::max(lmax,lp[s]);
+         }
+         double tot=0.0;
+         for(size_t s=0;s<nshards;s++) { tot+=std::exp(lp[s]-lmax); cp[i*nshards+s]=tot; }
+         for(size_t s=0;s<nshards;s++) cp[i*nshards+s]/=tot;
+      }
+
+      std::vector<size_t> snew(n);
+      std::vector<unsigned long> nsv(nshards);
+      bool nsok=false;
+      size_t ntries=0;
+      while(!nsok && ntries<maxutries) {
+         ntries++;
+         std::fill(nsv.begin(),nsv.end(),0);
+         for(size_t i=0;i<n;i++) {
+            double v=ugen.uniform();
+            size_t s=0;
+            while(s<(nshards-1) && v>=cp[i*nshards+s]) s++;
+            snew[i]=s;
+            nsv[s]++;
+         }
+         MPI_Allreduce(MPI_IN_PLACE,nsv.data(),nshards,MPI_UNSIGNED_LONG,MPI_SUM,MPI_COMM_WORLD);
+         nsok=true;
+         for(size_t s=0;s<nshards;s++) if(nsv[s]<T) nsok=false;
+      }
+
+      unsigned long nchanged=0, nall=0;
+      for(size_t s=0;s<nshards;s++) nall+=(unsigned long)shi.ns[s];
+      if(nsok) {
+         for(size_t i=0;i<n;i++) {
+            size_t s=snew[i];
+            if(s!=shardid) nchanged++;
+            double lo=(s==0) ? 0.0 : shi.cuts[s-1];
+            u[i]=lo+shi.w[s]*ugen.uniform();
+            if(shi.shard(u[i])!=s) u[i]=lo;  //(in case rounding put u on the upper cutpoint)
+         }
+         MPI_Allreduce(MPI_IN_PLACE,&nchanged,1,MPI_UNSIGNED_LONG,MPI_SUM,MPI_COMM_WORLD);
+         for(size_t s=0;s<nshards;s++) shi.ns[s]=(size_t)nsv[s];
+      }
+      else
+         nufail++;
+      double fchanged=((double)nchanged)/((double)nall);
+      uchanged+=fchanged;
+      if(worldrank==0) {
+         otrace << (ucount-1) << " " << fchanged << " " << ntries << " " << (nsok ? 1 : 0);
+         for(size_t s=0;s<nshards;s++) otrace << " " << shi.ns[s];
+         otrace << endl;
+      }
+      return nsok;
+   };
+   auto redrawu=[&]() {
+      double ut0=MPI_Wtime();
+
+      bool moved=true;
+      if(ugibbs) moved=drawugibbs();
+      else drawuprior();
+      nredraws++;
+      if(!moved) { utime+=MPI_Wtime()-ut0; return; }
 
       std::vector<std::vector<double>*> cols={&y,&sigmav,&obsid,&Cookd_mean,&Cookd_max,&KLinfl,&CPOinfl};
       mpi_shard_exchange(MPI_COMM_WORLD,shi,T,p,x,u,cols);
@@ -917,7 +1014,6 @@ if(modeltype!=MODEL_MIXBART){
       sig=disig.y;
       ambm.setci(tau,sig);
 
-      nredraws++;
       utime+=MPI_Wtime()-ut0;
    };
 #endif
@@ -1093,9 +1189,16 @@ if(modeltype!=MODEL_MIXBART){
             maxtime=std::max(maxtime,stimes[s]);
          }
          cout << "Maximum shard training time was " << maxtime << " minutes." << endl;
-         if(nredraws>0)
-            cout << "u was redrawn " << nredraws << " times, taking " << utime/60.0
+         if(nredraws>0) {
+            cout << "u was " << (ugibbs ? "updated" : "redrawn") << " " << nredraws << " times, taking " << utime/60.0
                  << " minutes (including waiting for the other shards)." << endl;
+            if(ugibbs) {
+               cout << "Mean fraction of shard labels changed per update was " << uchanged/((double)nredraws) << "." << endl;
+               if(nufail>0)
+                  cout << nufail << " updates kept the current labels because a shard would have had fewer than "
+                       << T << " observations." << endl;
+            }
+         }
          cout << "Training time was " << (wtend-wtstart)/60.0 << " minutes." << endl;
       }
    }
